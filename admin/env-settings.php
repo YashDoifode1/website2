@@ -1,0 +1,392 @@
+<?php
+/**
+ * Admin Environment Settings
+ * 
+ * Manage .env file settings from admin panel
+ */
+
+declare(strict_types=1);
+
+session_start();
+
+require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/env_manager.php';
+require_once __DIR__ . '/includes/auth.php';
+
+requireAdmin();
+
+$page_title = 'Environment Settings';
+$success_message = '';
+$error_message = '';
+
+// Handle form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    $action = $_POST['action'];
+    
+    if ($action === 'update_settings') {
+        // Backup current .env file
+        backupEnvFile();
+        
+        // Prepare values to update
+        $values = [
+            'SITE_NAME' => $_POST['site_name'] ?? '',
+            'SITE_TAGLINE' => $_POST['site_tagline'] ?? '',
+            'SITE_DESCRIPTION' => $_POST['site_description'] ?? '',
+            'SITE_KEYWORDS' => $_POST['site_keywords'] ?? '',
+            'CONTACT_EMAIL' => $_POST['contact_email'] ?? '',
+            'CONTACT_PHONE' => $_POST['contact_phone'] ?? '',
+            'CONTACT_ADDRESS' => $_POST['contact_address'] ?? '',
+            'BUSINESS_HOURS_WEEKDAY' => $_POST['business_hours_weekday'] ?? '',
+            'BUSINESS_HOURS_SATURDAY' => $_POST['business_hours_saturday'] ?? '',
+            'BUSINESS_HOURS_SUNDAY' => $_POST['business_hours_sunday'] ?? '',
+            'SITE_LOGO_TEXT' => $_POST['site_logo_text'] ?? '',
+            'SITE_LOGO_SUBTITLE' => $_POST['site_logo_subtitle'] ?? '',
+            'SHOW_LOGO_ICON' => isset($_POST['show_logo_icon']) ? 'true' : 'false',
+            'FACEBOOK_URL' => $_POST['facebook_url'] ?? '',
+            'TWITTER_URL' => $_POST['twitter_url'] ?? '',
+            'INSTAGRAM_URL' => $_POST['instagram_url'] ?? '',
+            'LINKEDIN_URL' => $_POST['linkedin_url'] ?? '',
+        ];
+        
+        // Update .env file
+        $results = updateEnvValues($values);
+        
+        if ($results['success'] > 0) {
+            $success_message = sprintf(
+                'Settings updated successfully! %d settings saved.',
+                $results['success']
+            );
+        }
+        
+        if ($results['failed'] > 0) {
+            $error_message = sprintf(
+                'Failed to update %d settings: %s',
+                $results['failed'],
+                implode(', ', $results['errors'])
+            );
+        }
+    }
+}
+
+// Get current .env values
+$envValues = getAllEnvValues();
+
+// Get file permissions
+$permissions = getEnvFilePermissions();
+
+require_once __DIR__ . '/includes/admin_header.php';
+?>
+
+<div class="admin-header">
+    <h1><i data-feather="settings"></i> Environment Settings</h1>
+    <p>Manage site configuration from .env file</p>
+</div>
+
+<?php if ($success_message): ?>
+    <div class="alert alert-success">
+        <i data-feather="check-circle"></i>
+        <?= sanitizeOutput($success_message) ?>
+    </div>
+<?php endif; ?>
+
+<?php if ($error_message): ?>
+    <div class="alert alert-error">
+        <i data-feather="alert-circle"></i>
+        <?= sanitizeOutput($error_message) ?>
+    </div>
+<?php endif; ?>
+
+<?php if (!$permissions['writable']): ?>
+    <div class="alert alert-warning">
+        <i data-feather="alert-triangle"></i>
+        <strong>Warning:</strong> .env file is not writable. Please check file permissions.
+    </div>
+<?php endif; ?>
+
+<form method="POST" id="settingsForm">
+    <input type="hidden" name="action" value="update_settings">
+    
+    <!-- Site Information -->
+    <div class="card">
+        <h2><i data-feather="info"></i> Site Information</h2>
+        
+        <div class="form-group">
+            <label class="form-label">Site Name *</label>
+            <input type="text" name="site_name" class="form-input" 
+                   value="<?= sanitizeOutput($envValues['SITE_NAME'] ?? '') ?>" required>
+            <small class="form-help">Your company or website name</small>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Site Tagline</label>
+            <input type="text" name="site_tagline" class="form-input" 
+                   value="<?= sanitizeOutput($envValues['SITE_TAGLINE'] ?? '') ?>">
+            <small class="form-help">A short tagline or slogan</small>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Site Description (SEO)</label>
+            <textarea name="site_description" class="form-textarea" rows="3"><?= sanitizeOutput($envValues['SITE_DESCRIPTION'] ?? '') ?></textarea>
+            <small class="form-help">Used in meta tags and search results</small>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Keywords (SEO)</label>
+            <input type="text" name="site_keywords" class="form-input" 
+                   value="<?= sanitizeOutput($envValues['SITE_KEYWORDS'] ?? '') ?>">
+            <small class="form-help">Comma-separated keywords for SEO</small>
+        </div>
+    </div>
+    
+    <!-- Logo Settings -->
+    <div class="card">
+        <h2><i data-feather="image"></i> Logo Settings</h2>
+        
+        <div class="form-grid">
+            <div class="form-group">
+                <label class="form-label">Logo Text</label>
+                <input type="text" name="site_logo_text" class="form-input" 
+                       value="<?= sanitizeOutput($envValues['SITE_LOGO_TEXT'] ?? '') ?>">
+                <small class="form-help">Main logo text (e.g., "Grand Jyothi")</small>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Logo Subtitle</label>
+                <input type="text" name="site_logo_subtitle" class="form-input" 
+                       value="<?= sanitizeOutput($envValues['SITE_LOGO_SUBTITLE'] ?? '') ?>">
+                <small class="form-help">Logo subtitle (e.g., "Construction")</small>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label class="checkbox-label">
+                <input type="checkbox" name="show_logo_icon" 
+                       <?= ($envValues['SHOW_LOGO_ICON'] ?? 'true') === 'true' ? 'checked' : '' ?>>
+                Show Logo Icon (Home icon in header)
+            </label>
+        </div>
+    </div>
+    
+    <!-- Contact Information -->
+    <div class="card">
+        <h2><i data-feather="phone"></i> Contact Information</h2>
+        
+        <div class="form-group">
+            <label class="form-label">Contact Email *</label>
+            <input type="email" name="contact_email" class="form-input" 
+                   value="<?= sanitizeOutput($envValues['CONTACT_EMAIL'] ?? '') ?>" required>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Contact Phone *</label>
+            <input type="text" name="contact_phone" class="form-input" 
+                   value="<?= sanitizeOutput($envValues['CONTACT_PHONE'] ?? '') ?>" required>
+            <small class="form-help">Include country code (e.g., +91 12345 67890)</small>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Business Address</label>
+            <textarea name="contact_address" class="form-textarea" rows="3"><?= sanitizeOutput($envValues['CONTACT_ADDRESS'] ?? '') ?></textarea>
+        </div>
+    </div>
+    
+    <!-- Business Hours -->
+    <div class="card">
+        <h2><i data-feather="clock"></i> Business Hours</h2>
+        
+        <div class="form-group">
+            <label class="form-label">Monday - Friday</label>
+            <input type="text" name="business_hours_weekday" class="form-input" 
+                   value="<?= sanitizeOutput($envValues['BUSINESS_HOURS_WEEKDAY'] ?? '') ?>"
+                   placeholder="9:00 AM - 6:00 PM">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Saturday</label>
+            <input type="text" name="business_hours_saturday" class="form-input" 
+                   value="<?= sanitizeOutput($envValues['BUSINESS_HOURS_SATURDAY'] ?? '') ?>"
+                   placeholder="9:00 AM - 2:00 PM">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Sunday</label>
+            <input type="text" name="business_hours_sunday" class="form-input" 
+                   value="<?= sanitizeOutput($envValues['BUSINESS_HOURS_SUNDAY'] ?? '') ?>"
+                   placeholder="Closed">
+        </div>
+    </div>
+    
+    <!-- Social Media -->
+    <div class="card">
+        <h2><i data-feather="share-2"></i> Social Media Links</h2>
+        
+        <div class="form-group">
+            <label class="form-label">Facebook URL</label>
+            <input type="url" name="facebook_url" class="form-input" 
+                   value="<?= sanitizeOutput($envValues['FACEBOOK_URL'] ?? '') ?>"
+                   placeholder="https://facebook.com/yourpage">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Twitter URL</label>
+            <input type="url" name="twitter_url" class="form-input" 
+                   value="<?= sanitizeOutput($envValues['TWITTER_URL'] ?? '') ?>"
+                   placeholder="https://twitter.com/yourhandle">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Instagram URL</label>
+            <input type="url" name="instagram_url" class="form-input" 
+                   value="<?= sanitizeOutput($envValues['INSTAGRAM_URL'] ?? '') ?>"
+                   placeholder="https://instagram.com/yourprofile">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">LinkedIn URL</label>
+            <input type="url" name="linkedin_url" class="form-input" 
+                   value="<?= sanitizeOutput($envValues['LINKEDIN_URL'] ?? '') ?>"
+                   placeholder="https://linkedin.com/company/yourcompany">
+        </div>
+    </div>
+    
+    <!-- File Information -->
+    <div class="card">
+        <h2><i data-feather="file-text"></i> File Information</h2>
+        
+        <div class="info-grid">
+            <div class="info-item">
+                <strong>File Status:</strong>
+                <span class="badge <?= $permissions['exists'] ? 'badge-success' : 'badge-error' ?>">
+                    <?= $permissions['exists'] ? 'Exists' : 'Not Found' ?>
+                </span>
+            </div>
+            
+            <div class="info-item">
+                <strong>Readable:</strong>
+                <span class="badge <?= $permissions['readable'] ? 'badge-success' : 'badge-error' ?>">
+                    <?= $permissions['readable'] ? 'Yes' : 'No' ?>
+                </span>
+            </div>
+            
+            <div class="info-item">
+                <strong>Writable:</strong>
+                <span class="badge <?= $permissions['writable'] ? 'badge-success' : 'badge-error' ?>">
+                    <?= $permissions['writable'] ? 'Yes' : 'No' ?>
+                </span>
+            </div>
+            
+            <?php if ($permissions['exists']): ?>
+            <div class="info-item">
+                <strong>Last Modified:</strong>
+                <?= date('M d, Y H:i:s', $permissions['modified']) ?>
+            </div>
+            <?php endif; ?>
+        </div>
+        
+        <div class="alert alert-info" style="margin-top: 1rem;">
+            <i data-feather="info"></i>
+            <strong>Note:</strong> Changes are saved to the .env file and take effect immediately. A backup is created automatically before each update.
+        </div>
+    </div>
+    
+    <!-- Submit Button -->
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">
+            <i data-feather="save"></i> Save Settings
+        </button>
+        <button type="button" class="btn btn-secondary" onclick="window.location.reload()">
+            <i data-feather="x"></i> Cancel
+        </button>
+    </div>
+</form>
+
+<style>
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    padding: 1rem;
+    background: #f9fafb;
+    border-radius: 6px;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    width: fit-content;
+}
+
+.badge-success {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.badge-error {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid #e2e8f0;
+}
+</style>
+
+<script>
+// Form validation
+document.getElementById('settingsForm').addEventListener('submit', function(e) {
+    const requiredFields = this.querySelectorAll('[required]');
+    let isValid = true;
+    
+    requiredFields.forEach(field => {
+        if (!field.value.trim()) {
+            isValid = false;
+            field.style.borderColor = '#ef4444';
+        } else {
+            field.style.borderColor = '';
+        }
+    });
+    
+    if (!isValid) {
+        e.preventDefault();
+        alert('Please fill in all required fields.');
+        return false;
+    }
+    
+    return confirm('Are you sure you want to update these settings? A backup will be created automatically.');
+});
+</script>
+
+<?php require_once __DIR__ . '/includes/admin_footer.php'; ?>

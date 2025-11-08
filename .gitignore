@@ -1,0 +1,51 @@
+# Environment Configuration
+.env
+
+# Logs
+logs/*.log
+*.log
+
+# Uploaded Files
+uploads/*
+!uploads/.gitkeep
+assets/images/uploads/*
+!assets/images/uploads/.gitkeep
+
+# OS Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE Files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Temporary Files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Backup Files
+*.bak
+*.backup
+*.old
+
+# Composer
+vendor/
+composer.lock
+
+# Node Modules (if using npm)
+node_modules/
+package-lock.json
+
+# Build Files
+dist/
+build/
+
+# Cache
+cache/*
+!cache/.gitkeep
