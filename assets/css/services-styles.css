@@ -1,0 +1,117 @@
+/* Modern UI Enhancements for Services Page */
+
+/* Hero Section */
+.hero {
+  position: relative;
+  height: 60vh;
+  background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('../images/services-bg.jpg') center/cover;
+  display: flex;
+  align-items: center;
+  color: white;
+  text-align: center;
+}
+
+/* Card Hover Effects */
+.card {
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+}
+
+/* Service Card Icons */
+.service-icon {
+  width: 60px;
+  height: 60px;
+  background: #f8f9fa;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+
+.service-icon i {
+    color: #007bff;
+    font-size: 24px;
+}
+
+/* Process Steps */
+.grid > article:nth-child(1) .card {
+  border-top: 4px solid #007bff;
+}
+.grid > article:nth-child(2) .card {
+  border-top: 4px solid #28a745;
+}
+.grid > article:nth-child(3) .card {
+  border-top: 4px solid #ffc107;
+}
+.grid > article:nth-child(4) .card {
+  border-top: 4px solid #dc3545;
+}
+.grid > article:nth-child(5) .card {
+  border-top: 4px solid #17a2b8;
+}
+.grid > article:nth-child(6) .card {
+  border-top: 4px solid #6f42c1;
+}
+
+/* Service Areas */
+.service-area-card {
+    text-align: center;
+    padding: 20px;
+    border-radius: 8px;
+    background: white;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    transition: all 0.3s ease;
+}
+
+.service-area-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+}
+
+.area-icon {
+    width: 50px;
+    height: 50px;
+    background: #f8f9fa;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 15px;
+}
+
+.area-icon i {
+    color: #007bff;
+    font-size: 20px;
+}
+
+/* Typography */
+h1, h2, h3, h4 {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
+}
+
+p {
+  line-height: 1.8;
+}
+
+.section-header {
+  margin-bottom: 50px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .grid, .grid-3, .grid-4 {
+    grid-template-columns: 1fr;
+  }
+  .hero {
+    height: 50vh;
+  }
+}

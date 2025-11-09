@@ -1,0 +1,104 @@
+/* Modern UI Enhancements for Home Page */
+.hero {
+  position: relative;
+  height: 80vh;
+  background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('../images/construction-bg.jpg') center/cover;
+  display: flex;
+  align-items: center;
+  color: white;
+  text-align: center;
+}
+
+.hero-content {
+  max-width: 800px;
+  margin: 0 auto;
+  animation: fadeInUp 1s ease;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.feature-box, .card {
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.feature-box:hover, .card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+}
+
+.feature-icon {
+  width: 70px;
+  height: 70px;
+  background: #f8f9fa;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+
+.project-card img {
+  transition: transform 0.5s ease;
+  height: 200px;
+  object-fit: cover;
+}
+
+.project-card:hover img {
+  transform: scale(1.05);
+}
+
+.testimonial {
+  background: #f8f9fa;
+  padding: 30px;
+  border-radius: 8px;
+  position: relative;
+}
+
+testimonial::before {
+  content: '"'; 
+  font-size: 80px;
+  position: absolute;
+  top: -20px;
+  left: 20px;
+  color: #e9ecef;
+  font-family: Georgia;
+}
+
+.package-card {
+  border: 1px solid #dee2e6;
+}
+
+.package-card:hover {
+  border-color: #007bff;
+}
+
+/* Typography improvements */
+h1, h2, h3 {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
+}
+
+p {
+  line-height: 1.8;
+}
+
+.section-header {
+  margin-bottom: 50px;
+  text-align: center;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .grid-3, .grid-4 {
+    grid-template-columns: 1fr;
+  }
+  .hero {
+    height: 60vh;
+  }
+}

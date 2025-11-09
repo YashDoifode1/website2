@@ -39,160 +39,178 @@ require_once __DIR__ . '/includes/header.php';
 
 <!-- Hero Section -->
 <header class="hero">
-    <div class="hero-content">
-        <h1>Welcome to Grand Jyothi Construction</h1>
-        <p>Building your vision with excellence and trust.</p>
-        <div class="hero-buttons">
-            <a href="/constructioninnagpur/projects.php" class="btn btn-primary">View Our Projects</a>
-            <a href="/constructioninnagpur/contact.php" class="btn btn-secondary">Get in Touch</a>
+    <div class="container">
+        <div class="hero-content">
+            <h1>Building Excellence Since 2005</h1>
+            <p class="lead">Premium construction services in Nagpur with unmatched quality and trust</p>
+            <div class="hero-cta">
+                <a href="/constructioninnagpur/projects.php" class="btn btn-primary">View Our Projects</a>
+                <a href="/constructioninnagpur/contact.php" class="btn btn-outline">Get a Free Quote</a>
+            </div>
         </div>
     </div>
 </header>
 
-<!-- About Section -->
-<main class="container section">
-    <section>
-        <hgroup>
-            <h2>About Grand Jyothi Construction</h2>
-            <p>Your trusted partner in construction excellence</p>
-        </hgroup>
-        <p>
-            With over 18 years of experience in the construction industry, Grand Jyothi Construction has established 
-            itself as a leading name in Nagpur. We specialize in residential, commercial, and industrial projects, 
-            delivering quality craftsmanship and innovative solutions that exceed client expectations.
-        </p>
-        <p>
-            Our commitment to excellence, attention to detail, and customer satisfaction has earned us the trust 
-            of hundreds of satisfied clients across Maharashtra.
-        </p>
-        <a href="/constructioninnagpur/about.php">Learn More About Us →</a>
+<main class="container">
+    <!-- About Section -->
+    <section class="section">
+        <div class="grid">
+            <div>
+                <hgroup>
+                    <h2>Your Trusted Construction Partner</h2>
+                    <p class="subtitle">Building visions into reality for over 18 years</p>
+                </hgroup>
+                <p>
+                    Grand Jyothi Construction brings expertise, innovation, and integrity to every project. 
+                    From residential homes to commercial complexes, we deliver exceptional quality that stands the test of time.
+                </p>
+                <p>
+                    Our client-focused approach ensures personalized solutions tailored to your unique requirements, 
+                    while our commitment to sustainable practices builds a better future for our community.
+                </p>
+                <a href="/constructioninnagpur/about.php" class="btn-link">Learn More About Us →</a>
+            </div>
+            <div>
+                <div class="featured-image">
+                    <img src="https://via.placeholder.com/600x400?text=Grand+Jyothi+Construction" 
+                         alt="Grand Jyothi Construction Project" 
+                         style="width: 100%; border-radius: 8px;">
+                </div>
+            </div>
+        </div>
     </section>
 
     <!-- Why Choose Us Section -->
-    <section class="why-choose-us">
-        <div class="section-header">
-            <h2>Why Choose Grand Jyothi Construction</h2>
-            <p>Experience the difference of working with industry leaders</p>
+    <section class="section bg-light">
+        <div class="section-header text-center">
+            <h2>Why Choose Grand Jyothi</h2>
+            <p class="lead">Excellence in every detail</p>
         </div>
         
         <div class="grid grid-3">
-            <div class="feature-box">
+            <div class="feature-card">
                 <div class="feature-icon">
                     <i data-feather="award"></i>
                 </div>
-                <h3>18+ Years of Excellence</h3>
-                <p>Nearly two decades of proven track record in delivering high-quality construction projects across Nagpur and Maharashtra.</p>
+                <h3>18+ Years Experience</h3>
+                <p>Proven expertise in residential and commercial construction across Maharashtra.</p>
             </div>
             
-            <div class="feature-box">
+            <div class="feature-card">
                 <div class="feature-icon">
-                    <i data-feather="shield"></i>
+                    <i data-feather="check-circle"></i>
                 </div>
                 <h3>Quality Assurance</h3>
-                <p>We use only premium materials and follow strict quality control measures to ensure durability and safety in every project.</p>
+                <p>Rigorous quality control processes ensure superior craftsmanship and materials.</p>
             </div>
             
-            <div class="feature-box">
+            <div class="feature-card">
                 <div class="feature-icon">
                     <i data-feather="clock"></i>
                 </div>
-                <h3>Timely Delivery</h3>
-                <p>Our efficient project management ensures that your project is completed on time without compromising on quality.</p>
+                <h3>Timely Completion</h3>
+                <p>Efficient project management delivers projects on schedule, every time.</p>
             </div>
             
-            <div class="feature-box">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i data-feather="dollar-sign"></i>
+                </div>
+                <h3>Transparent Pricing</h3>
+                <p>Honest quotes with no hidden costs - exceptional value for your investment.</p>
+            </div>
+            
+            <div class="feature-card">
                 <div class="feature-icon">
                     <i data-feather="users"></i>
                 </div>
                 <h3>Expert Team</h3>
-                <p>Our team of skilled architects, engineers, and craftsmen bring expertise and innovation to every project.</p>
+                <p>Certified professionals dedicated to realizing your construction vision.</p>
             </div>
             
-            <div class="feature-box">
-                <div class="feature-icon">
-                    <i data-feather="dollar-sign"></i>
-                </div>
-                <h3>Competitive Pricing</h3>
-                <p>We offer transparent pricing and flexible packages that provide excellent value for your investment.</p>
-            </div>
-            
-            <div class="feature-box">
+            <div class="feature-card">
                 <div class="feature-icon">
                     <i data-feather="headphones"></i>
                 </div>
-                <h3>24/7 Support</h3>
-                <p>Our dedicated customer support team is always available to address your queries and concerns.</p>
+                <h3>Dedicated Support</h3>
+                <p>Comprehensive after-sales service and 10-year structural warranty.</p>
             </div>
         </div>
     </section>
 
     <!-- Featured Services -->
-    <section>
-        <div class="section-header">
-            <h2>Our Services</h2>
-            <p>Comprehensive construction solutions for all your needs</p>
+    <section class="section">
+        <div class="section-header text-center">
+            <h2>Our Premium Services</h2>
+            <p class="lead">Comprehensive construction solutions</p>
         </div>
         
         <div class="grid grid-4">
             <?php foreach ($services as $service): ?>
-                <div class="card service-card">
-                    <i data-feather="<?= sanitizeOutput($service['icon']) ?>" class="card-icon"></i>
+                <div class="service-card">
+                    <div class="service-icon">
+                        <i data-feather="<?= sanitizeOutput($service['icon']) ?>"></i>
+                    </div>
                     <h3><?= sanitizeOutput($service['title']) ?></h3>
                     <p><?= sanitizeOutput($service['description']) ?></p>
                 </div>
             <?php endforeach; ?>
         </div>
         
-        <p style="text-align: center;">
-            <a href="/constructioninnagpur/services.php">View All Services →</a>
-        </p>
+        <div class="text-center">
+            <a href="/constructioninnagpur/services.php" class="btn btn-outline">View All Services</a>
+        </div>
     </section>
 
     <!-- Featured Projects -->
-    <section>
-        <div class="section-header">
+    <section class="section bg-light">
+        <div class="section-header text-center">
             <h2>Featured Projects</h2>
-            <p>Showcasing our latest completed works</p>
+            <p class="lead">Our latest completed works</p>
         </div>
         
         <div class="grid grid-3">
             <?php foreach ($projects as $project): ?>
-                <article class="card project-card">
-                    <img src="/constructioninnagpur/assets/images/<?= sanitizeOutput($project['image']) ?>" 
-                         alt="<?= sanitizeOutput($project['title']) ?>"
-                         onerror="this.src='https://via.placeholder.com/400x250?text=<?= urlencode($project['title']) ?>'">
-                    <h3><?= sanitizeOutput($project['title']) ?></h3>
-                    <div class="project-meta">
-                        <i data-feather="map-pin"></i>
-                        <span><?= sanitizeOutput($project['location']) ?></span>
+                <article class="project-card">
+                    <div class="project-image">
+                        <img src="/constructioninnagpur/assets/images/<?= sanitizeOutput($project['image']) ?>" 
+                             alt="<?= sanitizeOutput($project['title']) ?>"
+                             onerror="this.src='https://via.placeholder.com/600x400?text=<?= urlencode($project['title']) ?>'">
                     </div>
-                    <p><?= sanitizeOutput(substr($project['description'], 0, 120)) ?>...</p>
-                    <?php if ($project['completed_on']): ?>
+                    <div class="project-content">
+                        <h3><?= sanitizeOutput($project['title']) ?></h3>
                         <div class="project-meta">
-                            <i data-feather="calendar"></i>
-                            <span>Completed: <?= date('M Y', strtotime($project['completed_on'])) ?></span>
+                            <i data-feather="map-pin"></i>
+                            <span><?= sanitizeOutput($project['location']) ?></span>
                         </div>
-                    <?php endif; ?>
+                        <p><?= sanitizeOutput(substr($project['description'], 0, 120)) ?>...</p>
+                        <?php if ($project['completed_on']): ?>
+                            <div class="project-meta">
+                                <i data-feather="calendar"></i>
+                                <span>Completed: <?= date('M Y', strtotime($project['completed_on'])) ?></span>
+                            </div>
+                        <?php endif; ?>
+                    </div>
                 </article>
             <?php endforeach; ?>
         </div>
         
-        <p style="text-align: center;">
-            <a href="/constructioninnagpur/projects.php">View All Projects →</a>
-        </p>
+        <div class="text-center">
+            <a href="/constructioninnagpur/projects.php" class="btn btn-outline">View All Projects</a>
+        </div>
     </section>
 
     <!-- Packages Section -->
-    <section>
-        <div class="section-header">
-            <h2>Our Construction Packages</h2>
-            <p>Choose from our carefully designed packages to suit your budget and requirements</p>
+    <section class="section">
+        <div class="section-header text-center">
+            <h2>Construction Packages</h2>
+            <p class="lead">Tailored solutions for every need</p>
         </div>
         
         <?php if (!empty($packages)): ?>
             <div class="grid grid-3">
                 <?php foreach ($packages as $package): ?>
-                    <article class="card package-card">
+                    <article class="package-card">
                         <div class="package-header">
                             <h3><?= sanitizeOutput($package['title']) ?></h3>
                             <div class="package-price">
@@ -208,59 +226,81 @@ require_once __DIR__ . '/includes/header.php';
                             foreach ($displayFeatures as $feature): 
                             ?>
                                 <div class="feature-item">
-                                    <i data-feather="check-circle"></i>
+                                    <i data-feather="check"></i>
                                     <span><?= sanitizeOutput(trim($feature)) ?></span>
                                 </div>
                             <?php endforeach; ?>
                             <?php if (count($features) > 4): ?>
-                                <p class="text-muted" style="font-size: 0.875rem; margin-top: 0.5rem;">
-                                    +<?= count($features) - 4 ?> more features
+                                <p class="text-muted">
+                                    +<?= count($features) - 4 ?> additional features
                                 </p>
                             <?php endif; ?>
                         </div>
                         <a href="/constructioninnagpur/packages.php" class="btn btn-outline" style="width: 100%; margin-top: 1rem;">
-                            View Details
+                            Package Details
                         </a>
                     </article>
                 <?php endforeach; ?>
             </div>
         <?php endif; ?>
         
-        <p style="text-align: center; margin-top: 2rem;">
-            <a href="/constructioninnagpur/packages.php">View All Packages →</a>
-        </p>
+        <div class="text-center">
+            <a href="/constructioninnagpur/packages.php" class="btn btn-primary">View All Packages</a>
+        </div>
     </section>
 
     <!-- Testimonials -->
-    <section>
-        <div class="section-header">
-            <h2>What Our Clients Say</h2>
-            <p>Testimonials from satisfied customers</p>
+    <section class="section bg-light">
+        <div class="section-header text-center">
+            <h2>Client Testimonials</h2>
+            <p class="lead">Hear from our satisfied customers</p>
         </div>
         
-        <?php foreach ($testimonials as $testimonial): ?>
-            <div class="testimonial">
-                <blockquote>
-                    <?= sanitizeOutput($testimonial['text']) ?>
-                </blockquote>
-                <p class="testimonial-author">— <?= sanitizeOutput($testimonial['client_name']) ?></p>
-                <?php if ($testimonial['project_title']): ?>
-                    <p class="testimonial-project"><?= sanitizeOutput($testimonial['project_title']) ?></p>
-                <?php endif; ?>
-            </div>
-        <?php endforeach; ?>
+        <div class="testimonials-grid">
+            <?php foreach ($testimonials as $testimonial): ?>
+                <div class="testimonial-card">
+                    <div class="testimonial-content">
+                        <i data-feather="quote" class="quote-icon"></i>
+                        <blockquote>
+                            <?= sanitizeOutput($testimonial['text']) ?>
+                        </blockquote>
+                    </div>
+                    <div class="testimonial-author">
+                        <p class="client-name"><?= sanitizeOutput($testimonial['client_name']) ?></p>
+                        <?php if ($testimonial['project_title']): ?>
+                            <p class="project-name"><?= sanitizeOutput($testimonial['project_title']) ?></p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
         
-        <p style="text-align: center;">
-            <a href="/constructioninnagpur/testimonials.php">Read More Testimonials →</a>
-        </p>
+        <div class="text-center">
+            <a href="/constructioninnagpur/testimonials.php" class="btn btn-outline">Read More Testimonials</a>
+        </div>
     </section>
 
-    <!-- Call to Action -->
-    <section style="text-align: center; padding: 3rem 0;">
-        <h2>Ready to Start Your Project?</h2>
-        <p>Let's discuss how we can bring your vision to life.</p>
-        <a href="/constructioninnagpur/contact.php" role="button">Contact Us Today</a>
+    <!-- Final CTA -->
+    <section class="section cta-section text-center">
+        <h2>Ready to Start Your Construction Project?</h2>
+        <p class="lead">Contact us today for a free consultation and quote</p>
+        <div class="cta-buttons">
+            <a href="/constructioninnagpur/contact.php" class="btn btn-primary">Get in Touch</a>
+            <a href="tel:+919876543210" class="btn btn-outline">Call Now: +91 98765 43210</a>
+        </div>
     </section>
 </main>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
+<style>.btn-outline {
+    background: #2b1ef7;
+    border: 2px solid var(--bg-light);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    /* border-radius: var(--radius-md); */
+    text-decoration: none;
+    font-weight: 600;
+    display: inline-block;
+    text-align: center;
+    /* transition: all 0.3s 
+ease;</style>

@@ -1,0 +1,147 @@
+/* Modern UI Enhancements for About Page */
+
+/* Hero Section */
+.hero {
+  position: relative;
+  height: 60vh;
+  background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('../images/about-bg.jpg') center/cover;
+  display: flex;
+  align-items: center;
+  color: white;
+  text-align: center;
+}
+
+/* Card Hover Effects */
+.card {
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+}
+
+/* Core Values Icons */
+.card-icon {
+  width: 60px;
+  height: 60px;
+  background: #f8f9fa;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+
+/* Core Values */
+.value-card {
+    text-align: center;
+    padding: 30px 20px;
+    border-radius: 8px;
+    background: white;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    transition: all 0.3s ease;
+}
+
+.value-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+}
+
+.value-icon {
+    width: 70px;
+    height: 70px;
+    background: #f8f9fa;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+}
+
+.value-icon i {
+    color: #007bff;
+    font-size: 24px;
+}
+
+/* Why Choose Us */
+.why-choose-points {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+
+.point-item {
+    display: flex;
+    gap: 15px;
+    align-items: flex-start;
+}
+
+.point-icon {
+    width: 50px;
+    height: 50px;
+    background: #f8f9fa;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.point-icon i {
+    color: #007bff;
+    font-size: 20px;
+}
+
+/* Mission and Vision */
+.mission-card {
+    text-align: center;
+    padding: 30px;
+    border-radius: 8px;
+    background: white;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.mission-icon {
+    width: 70px;
+    height: 70px;
+    background: #f8f9fa;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+}
+
+.mission-icon i {
+    color: #007bff;
+    font-size: 24px;
+}
+
+/* Typography */
+h1, h2, h3, h4 {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
+}
+
+p {
+  line-height: 1.8;
+}
+
+.section-header {
+  margin-bottom: 50px;
+  text-align: center;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  .hero {
+    height: 50vh;
+  }
+}

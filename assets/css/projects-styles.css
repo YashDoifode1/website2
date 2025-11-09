@@ -1,0 +1,156 @@
+/* Modern UI Enhancements for Projects Page */
+
+/* Hero Section */
+.hero {
+  position: relative;
+  height: 60vh;
+  background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('../images/projects-bg.jpg') center/cover;
+  display: flex;
+  align-items: center;
+  color: white;
+  text-align: center;
+}
+
+/* Project Card Hover Effects */
+.project-card {
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  border-radius: 8px;
+  overflow: hidden;
+  background: white;
+}
+
+.project-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+}
+
+.project-card img {
+  transition: transform 0.5s ease;
+  height: 200px;
+  object-fit: cover;
+  width: 100%;
+}
+
+.project-card:hover img {
+  transform: scale(1.05);
+}
+
+.project-image {
+  position: relative;
+  overflow: hidden;
+}
+
+.project-badge {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: #007bff;
+  color: white;
+  padding: 5px 15px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+.project-content {
+  padding: 20px;
+}
+
+.project-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0;
+  color: #666;
+}
+
+.project-stats {
+  display: flex;
+  gap: 15px;
+  margin-top: 15px;
+}
+
+.stat-item {
+  text-align: center;
+  flex: 1;
+}
+
+.stat-value {
+  display: block;
+  font-weight: bold;
+  font-size: 1.1rem;
+  color: #007bff;
+}
+
+.stat-label {
+  display: block;
+  font-size: 0.8rem;
+  color: #666;
+}
+
+/* Statistics Section */
+.stats-card {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 30px;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-item h3 {
+  font-size: 2.5rem;
+  color: #007bff;
+  margin-bottom: 5px;
+}
+
+/* Process Steps */
+.process-step {
+  padding: 20px;
+}
+
+.step-icon {
+  width: 70px;
+  height: 70px;
+  background: #f8f9fa;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 15px;
+}
+
+.step-icon i {
+  color: #007bff;
+  font-size: 24px;
+}
+
+/* Typography */
+h1, h2, h3, h4 {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
+}
+
+p {
+  line-height: 1.8;
+}
+
+.section-header {
+  margin-bottom: 50px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .grid-3, .grid-4, .grid-5 {
+    grid-template-columns: 1fr;
+  }
+  .hero {
+    height: 50vh;
+  }
+  .project-stats {
+    flex-direction: column;
+    gap: 10px;
+  }
+}

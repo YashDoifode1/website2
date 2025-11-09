@@ -21,82 +21,165 @@ require_once __DIR__ . '/includes/header.php';
 
 <!-- Hero Section -->
 <header class="hero">
-    <div class="hero-content">
-        <h1>Our Latest Completed Projects</h1>
-        <p>Showcasing excellence in residential construction across Bangalore</p>
+    <div class="container">
+        <div class="hero-content">
+            <h1>Our Portfolio of Excellence</h1>
+            <p class="lead">Showcasing premium construction projects across Nagpur</p>
+        </div>
     </div>
 </header>
 
-<main class="container section">
-    <section>
-        <div class="section-header">
-            <h2>Recent Projects</h2>
-            <p>Explore our latest completed residential projects with quality craftsmanship and timely delivery</p>
+<main class="container">
+    <!-- Project Gallery -->
+    <section class="section">
+        <div class="section-header text-center">
+            <h2>Completed Projects</h2>
+            <p class="lead">Explore our handcrafted residential and commercial spaces</p>
         </div>
         
         <?php if (empty($projects)): ?>
-            <article>
+            <article class="card text-center">
                 <p>No projects available at the moment. Please check back later.</p>
             </article>
         <?php else: ?>
             <div class="grid grid-3">
                 <?php foreach ($projects as $project): ?>
-                    <article class="card project-card">
-                        <img src="/constructioninnagpur/assets/images/<?= sanitizeOutput($project['image']) ?>" 
-                             alt="<?= sanitizeOutput($project['title']) ?>"
-                             onerror="this.src='https://via.placeholder.com/400x250?text=<?= urlencode($project['title']) ?>'">
-                        
-                        <h3><?= sanitizeOutput($project['title']) ?></h3>
-                        
-                        <div class="project-meta">
-                            <i data-feather="map-pin"></i>
-                            <span><?= sanitizeOutput($project['location']) ?></span>
+                    <article class="project-card">
+                        <div class="project-image">
+                            <img src="/constructioninnagpur/assets/images/<?= sanitizeOutput($project['image'] ?? '') ?>" 
+                                 alt="<?= sanitizeOutput($project['title'] ?? '') ?>"
+                                 onerror="this.src='https://via.placeholder.com/600x400?text=<?= urlencode($project['title'] ?? '') ?>'">
+                            <?php if (isset($project['type']) && !empty($project['type'])): ?>
+                                <div class="project-badge">
+                                    <?= sanitizeOutput($project['type']) ?>
+                                </div>
+                            <?php endif; ?>
                         </div>
-                        
-                        <p><?= sanitizeOutput($project['description']) ?></p>
-                        
-                        <?php if ($project['completed_on']): ?>
+                        <div class="project-content">
+                            <h3><?= sanitizeOutput($project['title'] ?? '') ?></h3>
+                            
                             <div class="project-meta">
-                                <i data-feather="calendar"></i>
-                                <span>Completed: <?= date('F Y', strtotime($project['completed_on'])) ?></span>
+                                <i data-feather="map-pin"></i>
+                                <span><?= sanitizeOutput($project['location'] ?? '') ?></span>
                             </div>
-                        <?php endif; ?>
+                            
+                            <p><?= sanitizeOutput($project['description'] ?? '') ?></p>
+                            
+                            <?php if (isset($project['completed_on']) && $project['completed_on']): ?>
+                                <div class="project-meta">
+                                    <i data-feather="calendar"></i>
+                                    <span>Completed: <?= date('F Y', strtotime($project['completed_on'])) ?></span>
+                                </div>
+                            <?php endif; ?>
+                            
+                            <?php if (isset($project['size']) || isset($project['duration'])): ?>
+                                <div class="project-stats">
+                                    <?php if (isset($project['size']) && !empty($project['size'])): ?>
+                                        <div class="stat-item">
+                                            <span class="stat-value"><?= sanitizeOutput($project['size']) ?> sq.ft</span>
+                                            <span class="stat-label">Size</span>
+                                        </div>
+                                    <?php endif; ?>
+                                    <?php if (isset($project['duration']) && !empty($project['duration'])): ?>
+                                        <div class="stat-item">
+                                            <span class="stat-value"><?= sanitizeOutput($project['duration']) ?> months</span>
+                                            <span class="stat-label">Duration</span>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endif; ?>
+                        </div>
                     </article>
                 <?php endforeach; ?>
             </div>
         <?php endif; ?>
+        
+        <div class="text-center">
+            <a href="/constructioninnagpur/contact.php" class="btn btn-primary">Start Your Project</a>
+        </div>
     </section>
 
     <!-- Project Statistics -->
-    <section class="card" style="background: linear-gradient(135deg, var(--primary-blue) 0%, #003a8c 100%); color: white; text-align: center;">
-        <h2 style="color: white; margin-bottom: 2rem;">Our Track Record</h2>
-        <div class="grid grid-4">
-            <div>
-                <h3 style="color: var(--primary-orange); font-size: 3rem; margin-bottom: 0.5rem;">500+</h3>
-                <p style="color: white;"><strong>Projects Completed</strong></p>
-            </div>
-            <div>
-                <h3 style="color: var(--primary-orange); font-size: 3rem; margin-bottom: 0.5rem;">18+</h3>
-                <p style="color: white;"><strong>Years of Experience</strong></p>
-            </div>
-            <div>
-                <h3 style="color: var(--primary-orange); font-size: 3rem; margin-bottom: 0.5rem;">450+</h3>
-                <p style="color: white;"><strong>Happy Clients</strong></p>
-            </div>
-            <div>
-                <h3 style="color: var(--primary-orange); font-size: 3rem; margin-bottom: 0.5rem;">100%</h3>
-                <p style="color: white;"><strong>Quality Assured</strong></p>
+    <section class="section">
+        <div class="stats-card">
+            <div class="grid grid-4">
+                <div class="stat-item">
+                    <h3>500+</h3>
+                    <p>Projects Completed</p>
+                </div>
+                <div class="stat-item">
+                    <h3>18+</h3>
+                    <p>Years of Experience</p>
+                </div>
+                <div class="stat-item">
+                    <h3>450+</h3>
+                    <p>Happy Clients</p>
+                </div>
+                <div class="stat-item">
+                    <h3>100%</h3>
+                    <p>Quality Commitment</p>
+                </div>
             </div>
         </div>
     </section>
 
-    <!-- Call to Action -->
-    <section class="text-center" style="padding: 3rem 0;">
-        <h2>Have a Project in Mind?</h2>
-        <p style="font-size: 1.125rem; color: var(--text-gray); margin-bottom: 2rem;">Let's discuss how we can help bring your vision to life.</p>
-        <div class="hero-buttons">
-            <a href="/constructioninnagpur/contact.php" class="btn btn-primary">Start Your Project</a>
-            <a href="/constructioninnagpur/packages.php" class="btn btn-secondary">View Packages</a>
+    <!-- Process Section -->
+    <section class="section bg-light">
+        <div class="section-header text-center">
+            <h2>Our Construction Process</h2>
+            <p class="lead">Systematic excellence from concept to completion</p>
+        </div>
+        
+        <div class="grid grid-5 text-center">
+            <div class="process-step">
+                <div class="step-icon">
+                    <i data-feather="clipboard"></i>
+                </div>
+                <h4>Consultation</h4>
+                <p>Understanding your vision and requirements</p>
+            </div>
+            
+            <div class="process-step">
+                <div class="step-icon">
+                    <i data-feather="layout"></i>
+                </div>
+                <h4>Design</h4>
+                <p>Creating detailed architectural plans</p>
+            </div>
+            
+            <div class="process-step">
+                <div class="step-icon">
+                    <i data-feather="tool"></i>
+                </div>
+                <h4>Construction</h4>
+                <p>Quality execution with premium materials</p>
+            </div>
+            
+            <div class="process-step">
+                <div class="step-icon">
+                    <i data-feather="check-circle"></i>
+                </div>
+                <h4>Inspection</h4>
+                <p>Rigorous quality checks at every stage</p>
+            </div>
+            
+            <div class="process-step">
+                <div class="step-icon">
+                    <i data-feather="home"></i>
+                </div>
+                <h4>Handover</h4>
+                <p>Timely delivery with complete documentation</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="section cta-section text-center">
+        <h2>Ready to Build Your Vision?</h2>
+        <p class="lead">Contact us for a personalized consultation and quote</p>
+        <div class="cta-buttons">
+            <a href="/constructioninnagpur/contact.php" class="btn btn-primary">Get in Touch</a>
+            <a href="tel:+919876543210" class="btn btn-outline">Call Now: +91 98765 43210</a>
         </div>
     </section>
 </main>
