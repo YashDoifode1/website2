@@ -49,7 +49,7 @@ $nav_items = [
     
     <!-- Preload Critical Resources -->
     <link rel="preload" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <link rel="preload" href="/constructioninnagpur/assets/css/style.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" href="assets/css/style.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
     
     <!-- DNS Prefetch for external domains -->
     <link rel="dns-prefetch" href="https://fonts.googleapis.com">
@@ -63,38 +63,38 @@ $nav_items = [
     </noscript>
     
     <!-- Custom Styles -->
-    <link rel="stylesheet" href="/constructioninnagpur/assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/style.css">
     
     <!-- Conditionally load home page specific styles -->
     <?php if (basename($_SERVER['PHP_SELF']) === 'index.php'): ?>
-        <link rel="stylesheet" href="/constructioninnagpur/assets/css/home-styles.css">
+        <link rel="stylesheet" href="assets/css/home-styles.css">
     <?php endif; ?>
     
     <!-- Conditionally load page specific styles -->
     <?php if (basename($_SERVER['PHP_SELF']) === 'about.php'): ?>
-        <link rel="stylesheet" href="/constructioninnagpur/assets/css/about-styles.css">
+        <link rel="stylesheet" href="assets/css/about-styles.css">
     <?php elseif (basename($_SERVER['PHP_SELF']) === 'services.php'): ?>
-        <link rel="stylesheet" href="/constructioninnagpur/assets/css/services-styles.css">
+        <link rel="stylesheet" href="assets/css/services-styles.css">
     <?php elseif (basename($_SERVER['PHP_SELF']) === 'projects.php'): ?>
-        <link rel="stylesheet" href="/constructioninnagpur/assets/css/projects-styles.css">
+        <link rel="stylesheet" href="assets/css/projects-styles.css">
     <?php elseif (basename($_SERVER['PHP_SELF']) === 'packages.php'): ?>
-        <link rel="stylesheet" href="/constructioninnagpur/assets/css/packages-styles.css">
+        <link rel="stylesheet" href="assets/css/packages-styles.css">
     <?php elseif (basename($_SERVER['PHP_SELF']) === 'blog.php'): ?>
-        <link rel="stylesheet" href="/constructioninnagpur/assets/css/blog-styles.css">
+        <link rel="stylesheet" href="assets/css/blog-styles.css">
     <?php elseif (basename($_SERVER['PHP_SELF']) === 'blog-detail.php'): ?>
-        <link rel="stylesheet" href="/constructioninnagpur/assets/css/blog-detail-styles.css">
+        <link rel="stylesheet" href="assets/css/blog-detail-styles.css">
     <?php elseif (basename($_SERVER['PHP_SELF']) === 'testimonials.php'): ?>
-        <link rel="stylesheet" href="/constructioninnagpur/assets/css/testimonials-styles.css">
+        <link rel="stylesheet" href="assets/css/testimonials-styles.css">
     <?php elseif (basename($_SERVER['PHP_SELF']) === 'team.php'): ?>
-        <link rel="stylesheet" href="/constructioninnagpur/assets/css/team-styles.css">
+        <link rel="stylesheet" href="assets/css/team-styles.css">
     <?php endif; ?>
     
     <!-- Global Styles for Fixes -->
-    <link rel="stylesheet" href="/constructioninnagpur/assets/css/global-styles.css">
+    <link rel="stylesheet" href="assets/css/global-styles.css">
     
     <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="/constructioninnagpur/assets/images/favicon.ico">
-    <link rel="apple-touch-icon" sizes="180x180" href="/constructioninnagpur/assets/images/apple-touch-icon.png">
+    <link rel="icon" type="image/x-icon" href="assets/images/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/images/apple-touch-icon.png">
     
     <!-- Feather Icons - Deferred for better performance -->
     <script src="https://unpkg.com/feather-icons" defer></script>
@@ -125,13 +125,9 @@ $nav_items = [
     <nav class="main-nav" id="mainNav" aria-label="Main Navigation">
         <div class="nav-container">
             <!-- Logo Section -->
-            <a href="/constructioninnagpur/index.php" class="nav-logo" aria-label="Grand Jyothi Construction Home">
-                <?php if (defined('SHOW_LOGO_ICON') && SHOW_LOGO_ICON): ?>
-                <i data-feather="home" aria-hidden="true"></i>
-                <?php endif; ?>
+            <a href="index.php" class="nav-logo" aria-label="Grand Jyothi Construction Home">
                 <span class="logo-text">
-                    <strong><?= sanitizeOutput(defined('SITE_LOGO_TEXT') ? SITE_LOGO_TEXT : 'Grand Jyothi') ?></strong>
-                    <span class="logo-subtitle"><?= sanitizeOutput(defined('SITE_LOGO_SUBTITLE') ? SITE_LOGO_SUBTITLE : '') ?></span>
+                    <strong>Grand Jyothi Construction</strong>
                 </span>
             </a>
             
@@ -146,7 +142,7 @@ $nav_items = [
             <ul class="nav-menu" id="navMenu" role="menubar">
                 <?php foreach ($nav_items as $page => $title): ?>
                 <li role="none">
-                    <a href="/constructioninnagpur/<?= $page ?>" 
+                    <a href="<?= $page ?>" 
                        class="<?= $current_page === $page ? 'active' : '' ?>" 
                        role="menuitem"
                        aria-current="<?= $current_page === $page ? 'page' : 'false' ?>">
@@ -157,116 +153,371 @@ $nav_items = [
                 
                 <!-- Call to Action Button -->
                 <li class="nav-cta" role="none">
-                    <a href="/constructioninnagpur/contact.php" class="btn btn-primary" role="button">
-                        <i data-feather="phone" aria-hidden="true"></i>
+                    <a href="contact.php" class="btn btn-primary" role="button">
                          Quote
                     </a>
                 </li>
             </ul>
         </div>
     </nav>
-    <br><br><br>
+
     <!-- Main Content Wrapper -->
     <main id="main-content">
+
+<style>
+/* Header Navigation Styles */
+
+:root {
+        --primary-yellow: #F9A826;
+        --charcoal: #1A1A1A;
+        --white: #FFFFFF;
+        --light-gray: #f8f9fa;
+        --medium-gray: #e9ecef;
+    }
+
+    body {
+        font-family: 'Roboto', sans-serif;
+        color: var(--charcoal);
+        background-color: var(--white);
+        line-height: 1.6;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        font-family: 'Poppins', sans-serif;
+        font-weight: 600;
+    }
+.main-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid #e0e0e0;
+    z-index: 1000;
+    transition: all 0.3s ease;
+}
+
+.main-nav.scrolled {
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+}
+
+.nav-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 70px;
+}
+
+.nav-logo {
+    text-decoration: none;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.logo-text {
+    font-family: 'Montserrat', sans-serif;
+}
+
+.logo-text strong {
+    color: #333;
+    font-weight: 700;
+}
+
+/* Navigation Menu */
+.nav-menu {
+    display: flex;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    align-items: center;
     
-    <script>
-        // Enhanced mobile menu functionality
-        document.addEventListener('DOMContentLoaded', function() {
-            const navToggle = document.getElementById('navToggle');
-            const navMenu = document.getElementById('navMenu');
-            const mainNav = document.getElementById('mainNav');
-            
-            // Mobile menu toggle with accessibility
-            if (navToggle && navMenu) {
-                navToggle.addEventListener('click', function() {
-                    const isExpanded = this.getAttribute('aria-expanded') === 'true';
-                    this.setAttribute('aria-expanded', !isExpanded);
-                    navMenu.classList.toggle('active');
-                    document.body.classList.toggle('nav-open');
-                });
+}
+
+.nav-menu li {
+    margin: 0;
+}
+
+.nav-menu a {
+    text-decoration: none;
+    color: #555;
+    font-weight: 500;
+    font-family: 'Inter', sans-serif;
+    padding: 0.5rem 0;
+    position: relative;
+    transition: color 0.3s ease;
+}
+
+.nav-menu a:hover {
+    color: #333;
+}
+
+.nav-menu a.active {
+    color: #333;
+    font-weight: 600;
+}
+
+.nav-menu a.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #555;
+    border-radius: 2px;
+}
+
+/* CTA Button */
+.nav-cta .btn {
+    background: #555;
+    color: white;
+    padding: 0.5rem 1.5rem;
+    border-radius: 4px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    border: none;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.nav-cta .btn:hover {
+    background: #444;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Mobile Menu Toggle */
+.nav-toggle {
+    display: none;
+    flex-direction: column;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.5rem;
+    width: 30px;
+    height: 30px;
+    justify-content: center;
+    align-items: center;
+}
+
+.hamburger-box {
+    width: 20px;
+    height: 16px;
+    position: relative;
+}
+
+.hamburger-inner {
+    width: 20px;
+    height: 2px;
+    background: #333;
+    border-radius: 2px;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    transition: all 0.3s ease;
+}
+
+.hamburger-inner::before,
+.hamburger-inner::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 2px;
+    background: #333;
+    border-radius: 2px;
+    transition: all 0.3s ease;
+}
+
+.hamburger-inner::before {
+    top: -6px;
+}
+
+.hamburger-inner::after {
+    top: 6px;
+}
+
+/* Mobile Styles */
+@media (max-width: 768px) {
+    .nav-toggle {
+        display: flex;
+    }
+
+    .nav-menu {
+        position: fixed;
+        top: 70px;
+        left: 0;
+        right: 0;
+        background: white;
+        flex-direction: column;
+        padding: 2rem;
+        gap: 0;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        transform: translateY(-100%);
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .nav-menu.active {
+        transform: translateY(0);
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .nav-menu li {
+        width: 100%;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .nav-menu li:last-child {
+        border-bottom: none;
+    }
+
+    .nav-menu a {
+        display: block;
+        padding: 1rem 0;
+        width: 100%;
+        font-size: 1.1rem;
+    }
+
+    .nav-cta {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 2px solid #e0e0e0;
+    }
+
+    .nav-cta .btn {
+        width: 100%;
+        text-align: center;
+        padding: 1rem;
+        font-size: 1.1rem;
+    }
+
+    /* Hamburger animation */
+    .nav-toggle[aria-expanded="true"] .hamburger-inner {
+        background: transparent;
+    }
+
+    .nav-toggle[aria-expanded="true"] .hamburger-inner::before {
+        transform: rotate(45deg);
+        top: 0;
+    }
+
+    .nav-toggle[aria-expanded="true"] .hamburger-inner::after {
+        transform: rotate(-45deg);
+        top: 0;
+    }
+
+    /* Prevent body scroll when menu is open */
+    body.nav-open {
+        overflow: hidden;
+    }
+}
+
+/* Small mobile devices */
+@media (max-width: 480px) {
+    .nav-container {
+        padding: 0 0.75rem;
+    }
+
+    .nav-logo {
+        font-size: 1.25rem;
+    }
+
+    .nav-menu {
+        top: 70px;
+        padding: 1.5rem;
+    }
+}
+
+/* Skip link for accessibility */
+.skip-link {
+    position: absolute;
+    top: -40px;
+    left: 6px;
+    background: #333;
+    color: white;
+    padding: 8px;
+    text-decoration: none;
+    z-index: 1001;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+.skip-link:focus {
+    top: 6px;
+}
+</style>
+
+<script>
+    // Enhanced mobile menu functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const navToggle = document.getElementById('navToggle');
+        const navMenu = document.getElementById('navMenu');
+        const mainNav = document.getElementById('mainNav');
+        
+        // Mobile menu toggle with accessibility
+        if (navToggle && navMenu) {
+            navToggle.addEventListener('click', function() {
+                const isExpanded = this.getAttribute('aria-expanded') === 'true';
+                this.setAttribute('aria-expanded', !isExpanded);
+                navMenu.classList.toggle('active');
+                document.body.classList.toggle('nav-open');
+            });
+        }
+        
+        // Add shadow on scroll with performance optimization
+        let scrollTimer;
+        window.addEventListener('scroll', function() {
+            if (scrollTimer) {
+                clearTimeout(scrollTimer);
             }
             
-            // Add shadow on scroll with performance optimization
-            let scrollTimer;
-            window.addEventListener('scroll', function() {
-                if (scrollTimer) {
-                    clearTimeout(scrollTimer);
+            scrollTimer = setTimeout(function() {
+                if (window.scrollY > 10) {
+                    mainNav.classList.add('scrolled');
+                } else {
+                    mainNav.classList.remove('scrolled');
                 }
-                
-                scrollTimer = setTimeout(function() {
-                    if (window.scrollY > 10) {
-                        mainNav.classList.add('scrolled');
-                    } else {
-                        mainNav.classList.remove('scrolled');
-                    }
-                }, 10);
-            }, { passive: true });
-            
-            // Close mobile menu when clicking outside or pressing Escape
-            document.addEventListener('click', function(event) {
-                if (!event.target.closest('.main-nav') && navMenu.classList.contains('active')) {
-                    closeMobileMenu();
-                }
-            });
-            
-            document.addEventListener('keydown', function(event) {
-                if (event.key === 'Escape' && navMenu.classList.contains('active')) {
-                    closeMobileMenu();
-                }
-            });
-            
-            // Close mobile menu when clicking on a link
-            const navLinks = document.querySelectorAll('.nav-menu a');
-            navLinks.forEach(link => {
-                link.addEventListener('click', function() {
-                    if (window.innerWidth <= 768) {
-                        closeMobileMenu();
-                    }
-                });
-            });
-            
-            function closeMobileMenu() {
-                navMenu.classList.remove('active');
-                navToggle.setAttribute('aria-expanded', 'false');
-                document.body.classList.remove('nav-open');
-            }
-            
-            // Update navigation active state on scroll for single page apps or long pages
-            function updateActiveNavOnScroll() {
-                const sections = document.querySelectorAll('section[id]');
-                const scrollPos = window.scrollY + 100;
-                
-                sections.forEach(section => {
-                    const sectionTop = section.offsetTop;
-                    const sectionHeight = section.clientHeight;
-                    const sectionId = section.getAttribute('id');
-                    
-                    if (scrollPos >= sectionTop && scrollPos < sectionTop + sectionHeight) {
-                        const currentActive = document.querySelector('.nav-menu a.active');
-                        if (currentActive) {
-                            currentActive.classList.remove('active');
-                            currentActive.removeAttribute('aria-current');
-                        }
-                        
-                        const newActive = document.querySelector(`.nav-menu a[href*="${sectionId}"]`);
-                        if (newActive) {
-                            newActive.classList.add('active');
-                            newActive.setAttribute('aria-current', 'page');
-                        }
-                    }
-                });
-            }
-            
-            // Only run if it's a single page with sections
-            if (window.location.pathname === '/constructioninnagpur/index.php') {
-                window.addEventListener('scroll', updateActiveNavOnScroll, { passive: true });
+            }, 10);
+        }, { passive: true });
+        
+        // Close mobile menu when clicking outside or pressing Escape
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.main-nav') && navMenu.classList.contains('active')) {
+                closeMobileMenu();
             }
         });
         
-        // Feather icons replacement after page load
-        document.addEventListener('DOMContentLoaded', function() {
-            if (typeof feather !== 'undefined') {
-                feather.replace();
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape' && navMenu.classList.contains('active')) {
+                closeMobileMenu();
             }
         });
-    </script>
+        
+        // Close mobile menu when clicking on a link
+        const navLinks = document.querySelectorAll('.nav-menu a');
+        navLinks.forEach(link => {
+            link.addEventListener('click', function() {
+                if (window.innerWidth <= 768) {
+                    closeMobileMenu();
+                }
+            });
+        });
+        
+        function closeMobileMenu() {
+            if (navMenu) navMenu.classList.remove('active');
+            if (navToggle) navToggle.setAttribute('aria-expanded', 'false');
+            document.body.classList.remove('nav-open');
+        }
+    });
+</script>

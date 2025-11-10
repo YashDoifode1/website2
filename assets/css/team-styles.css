@@ -2,10 +2,13 @@
 
 /* Hero Section */
 .hero {
-  background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('../images/team-bg.jpg') center/cover;
+   position: relative;
+  height: 60vh;
+  background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('../images/construction-bg.jpg') center/cover;
+  display: flex;
+  align-items: center;
   color: white;
   text-align: center;
-  padding: 100px 0;
 }
 
 /* Team Grid */

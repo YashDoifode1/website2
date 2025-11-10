@@ -1,16 +1,26 @@
 /* Modern UI Enhancements for Testimonials Page */
 
 /* Hero Section */
-.testimonials-hero {
+.hero {
   position: relative;
-  height: 50vh;
-  background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('../images/testimonials-bg.jpg') center/cover;
+  height: 60vh;
+  background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('../images/construction-bg.jpg') center/cover;
   display: flex;
   align-items: center;
   color: white;
   text-align: center;
 }
 
+.hero-content {
+  max-width: 800px;
+  margin: 0 auto;
+  animation: fadeInUp 1s ease;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 /* Testimonials Grid */
 .testimonials-grid {
   display: grid;

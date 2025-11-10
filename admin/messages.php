@@ -1,8 +1,8 @@
 <?php
 /**
  * Admin Messages Management
- * 
- * View and delete contact form messages
+ * View, reply, and delete contact form submissions
+ * Updated for new contact_messages table schema
  */
 
 declare(strict_types=1);
@@ -20,32 +20,50 @@ $action = $_GET['action'] ?? 'list';
 $message_id = $_GET['id'] ?? null;
 
 // Handle Delete
-if ($action === 'delete' && $message_id) {
+if ($action === 'delete' && $message_id && is_numeric($message_id)) {
     try {
-        executeQuery("DELETE FROM contact_messages WHERE id = ?", [$message_id]);
-        $success_message = 'Message deleted successfully!';
+        $stmt = executeQuery("DELETE FROM contact_messages WHERE id = ?", [$message_id]);
+        if ($stmt->rowCount() > 0) {
+            $success_message = 'Message deleted successfully!';
+        } else {
+            $error_message = 'Message not found or already deleted.';
+        }
         $action = 'list';
     } catch (PDOException $e) {
         error_log('Delete Message Error: ' . $e->getMessage());
-        $error_message = 'Error deleting message.';
+        $error_message = 'Database error while deleting message.';
     }
 }
 
-// Fetch message for viewing
+// Fetch single message for view
 $message = null;
-if ($action === 'view' && $message_id) {
+if ($action === 'view' && $message_id && is_numeric($message_id)) {
     $stmt = executeQuery("SELECT * FROM contact_messages WHERE id = ?", [$message_id]);
-    $message = $stmt->fetch();
+    $message = $stmt->fetch(PDO::FETCH_ASSOC);
     if (!$message) {
         $error_message = 'Message not found.';
         $action = 'list';
     }
 }
 
-// Fetch all messages for listing
+// Fetch all messages for list
 $messages = [];
 if ($action === 'list') {
-    $messages = executeQuery("SELECT id, name, email, phone, message, selected_plan, created_at FROM contact_messages ORDER BY created_at DESC")->fetchAll();
+    $messages = executeQuery("
+        SELECT 
+            id, 
+            first_name, 
+            last_name, 
+            email, 
+            phone, 
+            project_type, 
+            budget, 
+            message, 
+            submitted_at,
+            ip_address
+        FROM contact_messages 
+        ORDER BY submitted_at DESC
+    ")->fetchAll(PDO::FETCH_ASSOC);
 }
 
 require_once __DIR__ . '/includes/admin_header.php';
@@ -53,7 +71,7 @@ require_once __DIR__ . '/includes/admin_header.php';
 
 <div class="content-header">
     <h1>Contact Messages</h1>
-    <p>View and manage customer inquiries and contact form submissions</p>
+    <p>View and manage all customer inquiries from the contact form</p>
 </div>
 
 <?php if ($success_message): ?>
@@ -76,9 +94,12 @@ require_once __DIR__ . '/includes/admin_header.php';
         <div class="card-header">
             <h2 class="card-title">All Messages (<?= count($messages) ?>)</h2>
         </div>
-        
+
         <?php if (empty($messages)): ?>
-            <p>No messages yet. Messages from the contact form will appear here.</p>
+            <div class="p-4 text-center text-muted">
+                <i data-feather="inbox" style="width: 48px; height: 48px; opacity: 0.3;"></i>
+                <p class="mt-3">No messages yet. New inquiries will appear here.</p>
+            </div>
         <?php else: ?>
             <div class="table-container">
                 <table class="admin-table">
@@ -88,39 +109,54 @@ require_once __DIR__ . '/includes/admin_header.php';
                             <th>Name</th>
                             <th>Email</th>
                             <th>Phone</th>
-                            <th>Selected Plan</th>
+                            <th>Project Type</th>
+                            <th>Budget</th>
                             <th>Message Preview</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($messages as $msg): ?>
+                        <?php foreach ($messages as $msg): 
+                            $full_name = trim($msg['first_name'] . ' ' . $msg['last_name']);
+                        ?>
                             <tr>
-                                <td><?= date('M d, Y H:i', strtotime($msg['created_at'])) ?></td>
-                                <td><strong><?= sanitizeOutput($msg['name']) ?></strong></td>
-                                <td>
-                                    <a href="mailto:<?= sanitizeOutput($msg['email']) ?>" style="color: var(--admin-primary);">
+                                <td data-label="Date">
+                                    <?= date('M d, Y', strtotime($msg['submitted_at'])) ?><br>
+                                    <small class="text-muted"><?= date('H:i', strtotime($msg['submitted_at'])) ?></small>
+                                </td>
+                                <td data-label="Name">
+                                    <strong><?= sanitizeOutput($full_name) ?></strong>
+                                </td>
+                                <td data-label="Email">
+                                    <a href="mailto:<?= sanitizeOutput($msg['email']) ?>" class="text-primary">
                                         <?= sanitizeOutput($msg['email']) ?>
                                     </a>
                                 </td>
-                                <td>
-                                    <a href="tel:<?= sanitizeOutput($msg['phone']) ?>" style="color: var(--admin-primary);">
+                                <td data-label="Phone">
+                                    <a href="tel:<?= sanitizeOutput($msg['phone']) ?>" class="text-primary">
                                         <?= sanitizeOutput($msg['phone']) ?>
                                     </a>
                                 </td>
-                                <td>
-                                    <?php if ($msg['selected_plan']): ?>
-                                        <span style="background: var(--admin-primary); color: white; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.875rem; font-weight: 500;">
-                                            <?= sanitizeOutput($msg['selected_plan']) ?>
-                                        </span>
-                                    <?php else: ?>
-                                        <span style="color: var(--admin-text-gray);">—</span>
-                                    <?php endif; ?>
+                                <td data-label="Project Type">
+                                    <?= $msg['project_type'] ? sanitizeOutput($msg['project_type']) : '<span class="text-muted">—</span>' ?>
                                 </td>
-                                <td><?= sanitizeOutput(substr($msg['message'], 0, 50)) ?>...</td>
+                                <td data-label="Budget">
+                                    <?= $msg['budget'] ? sanitizeOutput($msg['budget']) : '<span class="text-muted">—</span>' ?>
+                                </td>
+                                <td data-label="Message">
+                                    <?= sanitizeOutput(substr(strip_tags($msg['message']), 0, 60)) ?>
+                                    <?= strlen(strip_tags($msg['message'])) > 60 ? '...' : '' ?>
+                                </td>
                                 <td class="table-actions">
-                                    <a href="?action=view&id=<?= $msg['id'] ?>" class="btn-edit">View</a>
-                                    <a href="?action=delete&id=<?= $msg['id'] ?>" class="btn-delete">Delete</a>
+                                    <a href="?action=view&id=<?= $msg['id'] ?>" class="btn-edit" title="View">
+                                        <i data-feather="eye"></i>
+                                    </a>
+                                    <a href="?action=delete&id=<?= $msg['id'] ?>" 
+                                       class="btn-delete" 
+                                       title="Delete"
+                                       onclick="return confirm('Delete this message permanently?')">
+                                        <i data-feather="trash-2"></i>
+                                    </a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -129,63 +165,96 @@ require_once __DIR__ . '/includes/admin_header.php';
             </div>
         <?php endif; ?>
     </div>
-        
-    
+
 <?php elseif ($action === 'view' && $message): ?>
     <!-- View Message -->
     <div class="card">
-        <div class="card-header">
-            <h2 class="card-title">Message Details</h2>
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h2 class="card-title mb-0">Message Details</h2>
             <a href="?action=list" class="btn btn-secondary">
                 <i data-feather="arrow-left"></i> Back to List
             </a>
         </div>
-        
-        <div style="background: var(--admin-bg-light); padding: 1.5rem; border-radius: var(--radius-md); margin-bottom: 1.5rem;">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
-                <div>
-                    <p style="color: var(--admin-text-gray); font-size: var(--font-size-sm); margin-bottom: 0.25rem;">From</p>
-                    <p style="font-weight: 600; color: var(--admin-text-dark);"><?= sanitizeOutput($message['name']) ?></p>
+
+        <div class="p-4 bg-light rounded mb-4">
+            <div class="row g-3">
+                <div class="col-md-6 col-lg-3">
+                    <small class="text-muted">Full Name</small>
+                    <p class="fw-bold mb-0">
+                        <?= sanitizeOutput(trim($message['first_name'] . ' ' . $message['last_name'])) ?>
+                    </p>
                 </div>
-                <div>
-                    <p style="color: var(--admin-text-gray); font-size: var(--font-size-sm); margin-bottom: 0.25rem;">Email</p>
-                    <p><a href="mailto:<?= sanitizeOutput($message['email']) ?>" style="color: var(--admin-primary); font-weight: 600;"><?= sanitizeOutput($message['email']) ?></a></p>
+                <div class="col-md-6 col-lg-3">
+                    <small class="text-muted">Email</small>
+                    <p class="mb-0">
+                        <a href="mailto:<?= sanitizeOutput($message['email']) ?>" class="text-primary fw-bold">
+                            <?= sanitizeOutput($message['email']) ?>
+                        </a>
+                    </p>
                 </div>
-                <div>
-                    <p style="color: var(--admin-text-gray); font-size: var(--font-size-sm); margin-bottom: 0.25rem;">Phone</p>
-                    <p><a href="tel:<?= sanitizeOutput($message['phone']) ?>" style="color: var(--admin-primary); font-weight: 600;"><?= sanitizeOutput($message['phone']) ?></a></p>
+                <div class="col-md-6 col-lg-3">
+                    <small class="text-muted">Phone</small>
+                    <p class="mb-0">
+                        <a href="tel:<?= sanitizeOutput($message['phone']) ?>" class="text-primary fw-bold">
+                            <?= sanitizeOutput($message['phone']) ?>
+                        </a>
+                    </p>
                 </div>
-                <div>
-                    <p style="color: var(--admin-text-gray); font-size: var(--font-size-sm); margin-bottom: 0.25rem;">Date</p>
-                    <p style="font-weight: 600; color: var(--admin-text-dark);"><?= date('F d, Y \a\t H:i', strtotime($message['created_at'])) ?></p>
+                <div class="col-md-6 col-lg-3">
+                    <small class="text-muted">Submitted</small>
+                    <p class="mb-0 fw-bold">
+                        <?= date('F d, Y \a\t H:i', strtotime($message['submitted_at'])) ?>
+                    </p>
                 </div>
-                <?php if ($message['selected_plan']): ?>
-                <div>
-                    <p style="color: var(--admin-text-gray); font-size: var(--font-size-sm); margin-bottom: 0.25rem;">Selected Plan</p>
-                    <p style="background: var(--admin-primary); color: white; padding: 0.5rem 1rem; border-radius: 12px; font-size: 0.875rem; font-weight: 600; display: inline-block;">
-                        <?= sanitizeOutput($message['selected_plan']) ?>
+            </div>
+
+            <div class="row g-3 mt-2">
+                <?php if ($message['project_type']): ?>
+                <div class="col-md-6 col-lg-3">
+                    <small class="text-muted">Project Type</small>
+                    <p class="mb-0">
+                        <span class="badge bg-warning text-dark"><?= sanitizeOutput($message['project_type']) ?></span>
+                    </p>
+                </div>
+                <?php endif; ?>
+                <?php if ($message['budget']): ?>
+                <div class="col-md-6 col-lg-3">
+                    <small class="text-muted">Budget Range</small>
+                    <p class="mb-0">
+                        <span class="badge bg-success text-white"><?= sanitizeOutput($message['budget']) ?></span>
+                    </p>
+                </div>
+                <?php endif; ?>
+                <?php if ($message['ip_address']): ?>
+                <div class="col-md-6 col-lg-3">
+                    <small class="text-muted">IP Address</small>
+                    <p class="mb-0 text-muted small">
+                        <?= sanitizeOutput($message['ip_address']) ?>
                     </p>
                 </div>
                 <?php endif; ?>
             </div>
         </div>
-        
-        <div style="margin-bottom: 1.5rem;">
-            <h3 style="font-size: var(--font-size-lg); margin-bottom: 1rem; color: var(--admin-text-dark);">Message:</h3>
-            <div style="background: var(--admin-bg-white); padding: 1.5rem; border: 1px solid var(--admin-border); border-radius: var(--radius-md); line-height: 1.8;">
+
+        <div class="mb-4">
+            <h3 class="h5 text-dark mb-3">Full Message:</h3>
+            <div class="bg-white p-4 border rounded" style="line-height: 1.8; white-space: pre-wrap;">
                 <?= nl2br(sanitizeOutput($message['message'])) ?>
             </div>
         </div>
-        
-        <div class="btn-group">
-            <a href="mailto:<?= sanitizeOutput($message['email']) ?>?subject=Re: Your Inquiry" class="btn btn-primary">
+
+        <div class="d-flex flex-wrap gap-2">
+            <a href="mailto:<?= sanitizeOutput($message['email']) ?>?subject=Re:%20Your%20Inquiry%20at%20Grand%20Jyothi" 
+               class="btn btn-primary">
                 <i data-feather="mail"></i> Reply via Email
             </a>
             <a href="?action=list" class="btn btn-secondary">
-                <i data-feather="arrow-left"></i> Back to List
+                <i data-feather="list"></i> All Messages
             </a>
-            <a href="?action=delete&id=<?= $message['id'] ?>" class="btn btn-danger">
-                <i data-feather="trash-2"></i> Delete Message
+            <a href="?action=delete&id=<?= $message['id'] ?>" 
+               class="btn btn-danger"
+               onclick="return confirm('Permanently delete this message?')">
+                <i data-feather="trash-2"></i> Delete
             </a>
         </div>
     </div>

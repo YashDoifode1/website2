@@ -1,8 +1,8 @@
 <?php
 /**
  * Admin Mail System
- * 
  * Send email notifications to users
+ * Updated for new contact_messages schema (first_name, last_name)
  */
 
 declare(strict_types=1);
@@ -60,11 +60,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             if (empty($recipientEmails)) {
                 $error_message = 'No valid email addresses found.';
             } else {
-                // Prepare email content based on type
+                // Prepare email content
                 $emailContent = '';
                 
                 if ($emailType === 'blog_notification' && !empty($_POST['blog_id'])) {
-                    // Get blog details
                     try {
                         $blogSql = "SELECT * FROM blog_posts WHERE id = ?";
                         $blogStmt = executeQuery($blogSql, [$_POST['blog_id']]);
@@ -79,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                             ]);
                         }
                     } catch (PDOException $e) {
-                        $error_message = 'Blog posts table not available. Please use Custom Notification instead.';
+                        $error_message = 'Blog posts table not available.';
                     }
                 } elseif ($emailType === 'construction_update') {
                     $projectName = $_POST['project_name'] ?? 'N/A';
@@ -95,7 +94,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         'contact_phone' => CONTACT_PHONE
                     ]);
                 } else {
-                    // Custom notification
                     $emailContent = getEmailTemplate('custom_notification', [
                         'site_name' => SITE_NAME,
                         'subtitle' => 'Important Update',
@@ -114,43 +112,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 }
                 
                 $success_message = sprintf(
-                    'Emails sent successfully! Success: %d, Failed: %d',
+                    'Emails sent! Success: %d, Failed: %d',
                     $results['success'],
                     $results['failed']
                 );
                 
                 if ($results['failed'] > 0) {
-                    $error_message = 'Some emails failed to send: ' . implode(', ', $results['errors']);
+                    $error_message = 'Some emails failed: ' . implode(', ', $results['errors']);
                 }
             }
         }
     }
 }
 
-// Fetch contacts for recipient selection
-$contacts_sql = "SELECT id, name, email, created_at FROM contact_messages ORDER BY created_at DESC";
+// Fetch contacts with first_name + last_name
+$contacts_sql = "
+    SELECT 
+        id, 
+        first_name, 
+        last_name, 
+        email, 
+        submitted_at 
+    FROM contact_messages 
+    WHERE email IS NOT NULL AND email != '' 
+    ORDER BY submitted_at DESC
+";
 $contacts_stmt = executeQuery($contacts_sql);
 $contacts = $contacts_stmt->fetchAll();
 
-// Fetch recent blog posts (if table exists)
+// Fetch recent blog posts
 $blogs = [];
 try {
     $blogs_sql = "SELECT id, title, created_at FROM blog_posts ORDER BY created_at DESC LIMIT 10";
     $blogs_stmt = executeQuery($blogs_sql);
     $blogs = $blogs_stmt->fetchAll();
 } catch (PDOException $e) {
-    // Blog table doesn't exist yet, that's okay
     error_log('Blog posts table not found: ' . $e->getMessage());
 }
 
-// Fetch recent projects (if table exists)
+// Fetch recent projects
 $projects = [];
 try {
     $projects_sql = "SELECT id, title FROM projects ORDER BY created_at DESC LIMIT 10";
     $projects_stmt = executeQuery($projects_sql);
     $projects = $projects_stmt->fetchAll();
 } catch (PDOException $e) {
-    // Projects table doesn't exist yet, that's okay
     error_log('Projects table not found: ' . $e->getMessage());
 }
 
@@ -158,31 +164,29 @@ require_once __DIR__ . '/includes/admin_header.php';
 ?>
 
 <div class="admin-header">
-    <h1><i data-feather="mail"></i> Email Notifications</h1>
-    <p>Send email notifications to your contacts</p>
+    <h1>Email Notifications</h1>
+    <p>Send updates to your clients and leads</p>
 </div>
 
 <?php if ($success_message): ?>
     <div class="alert alert-success">
-        <i data-feather="check-circle"></i>
         <?= sanitizeOutput($success_message) ?>
     </div>
 <?php endif; ?>
 
 <?php if ($error_message): ?>
     <div class="alert alert-error">
-        <i data-feather="alert-circle"></i>
         <?= sanitizeOutput($error_message) ?>
     </div>
 <?php endif; ?>
 
 <div class="card">
-    <h2>Compose Email</h2>
+    <h2 class="card-title">Compose Email</h2>
     
     <form method="POST" id="emailForm">
         <input type="hidden" name="action" value="send_email">
         
-        <!-- Email Type Selection -->
+        <!-- Email Type -->
         <div class="form-group">
             <label class="form-label">Email Type</label>
             <select name="email_type" id="emailType" class="form-input" required>
@@ -193,19 +197,20 @@ require_once __DIR__ . '/includes/admin_header.php';
             </select>
         </div>
         
-        <!-- Blog Selection (shown when blog_notification selected) -->
+        <!-- Blog Selection -->
         <div class="form-group" id="blogSelection" style="display: none;">
             <label class="form-label">Select Blog Post</label>
             <?php if (empty($blogs)): ?>
-                <p class="text-muted" style="padding: 1rem; background: #f9fafb; border-radius: 6px;">
-                    <i data-feather="info"></i> No blog posts available yet. Create blog posts first or use Custom Notification instead.
+                <p class="text-muted p-3 bg-light rounded">
+                    No blog posts available. Use Custom Notification.
                 </p>
             <?php else: ?>
                 <select name="blog_id" class="form-input">
-                    <option value="">Select a blog post</option>
+                    <option value="">Choose a post</option>
                     <?php foreach ($blogs as $blog): ?>
                         <option value="<?= $blog['id'] ?>">
-                            <?= sanitizeOutput($blog['title']) ?> (<?= date('M d, Y', strtotime($blog['created_at'])) ?>)
+                            <?= sanitizeOutput($blog['title']) ?> 
+                            (<?= date('M d, Y', strtotime($blog['created_at'])) ?>)
                         </option>
                     <?php endforeach; ?>
                 </select>
@@ -216,9 +221,8 @@ require_once __DIR__ . '/includes/admin_header.php';
         <div id="constructionFields" style="display: none;">
             <div class="form-group">
                 <label class="form-label">Project Name</label>
-                <input type="text" name="project_name" class="form-input" placeholder="Enter project name">
+                <input type="text" name="project_name" class="form-input" placeholder="e.g. Villa at Nagpur">
             </div>
-            
             <div class="form-group">
                 <label class="form-label">Project Status</label>
                 <select name="project_status" class="form-input">
@@ -233,199 +237,142 @@ require_once __DIR__ . '/includes/admin_header.php';
         
         <!-- Subject -->
         <div class="form-group">
-            <label class="form-label">Email Subject *</label>
+            <label class="form-label">Subject *</label>
             <input type="text" name="subject" class="form-input" placeholder="Enter email subject" required>
         </div>
         
         <!-- Custom Message -->
         <div class="form-group">
             <label class="form-label">Message *</label>
-            <textarea name="custom_message" class="form-textarea" rows="8" placeholder="Enter your message..." required></textarea>
-            <small class="form-help">You can use HTML formatting in your message.</small>
+            <textarea name="custom_message" class="form-textarea" rows="8" 
+                      placeholder="Write your message here..." required></textarea>
+            <small class="form-help">HTML is supported.</small>
         </div>
         
         <!-- Recipients -->
         <div class="form-group">
             <label class="form-label">Recipients *</label>
-            <div style="margin-bottom: 1rem;">
-                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                    <input type="checkbox" name="recipients[]" value="all_contacts" id="selectAll">
-                    <strong>Select All Contacts (<?= count($contacts) ?> recipients)</strong>
+            <div class="mb-3">
+                <label class="form-check">
+                    <input type="checkbox" name="recipients[]" value="all_contacts" id="selectAll" class="form-check-input">
+                    <span class="form-check-label fw-bold">
+                        Select All Contacts (<?= count($contacts) ?>)
+                    </span>
                 </label>
             </div>
             
-            <div style="max-height: 300px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px; padding: 1rem;">
+            <div class="recipients-list border rounded p-3" style="max-height: 320px; overflow-y: auto;">
                 <?php if (empty($contacts)): ?>
-                    <p class="text-muted">No contacts available. Contacts are added when users submit the contact form.</p>
+                    <p class="text-muted mb-0">No contacts yet. They appear here after form submissions.</p>
                 <?php else: ?>
-                    <?php foreach ($contacts as $contact): ?>
-                        <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; cursor: pointer; border-bottom: 1px solid #f1f5f9;">
-                            <input type="checkbox" name="recipients[]" value="<?= $contact['id'] ?>" class="recipient-checkbox">
-                            <div>
-                                <strong><?= sanitizeOutput($contact['name']) ?></strong>
-                                <br>
+                    <?php foreach ($contacts as $contact): 
+                        $full_name = trim($contact['first_name'] . ' ' . $contact['last_name']);
+                    ?>
+                        <label class="form-check d-block p-2 border-bottom">
+                            <input type="checkbox" name="recipients[]" value="<?= $contact['id'] ?>" class="form-check-input recipient-checkbox">
+                            <span class="form-check-label">
+                                <strong><?= sanitizeOutput($full_name) ?></strong><br>
                                 <small class="text-muted"><?= sanitizeOutput($contact['email']) ?></small>
-                            </div>
+                            </span>
                         </label>
                     <?php endforeach; ?>
                 <?php endif; ?>
             </div>
         </div>
         
-        <!-- Preview Button -->
-        <div class="form-actions">
-            <button type="button" class="btn btn-secondary" onclick="previewEmail()">
-                <i data-feather="eye"></i> Preview
+        <!-- Actions -->
+        <div class="form-actions d-flex gap-2 mt-4">
+            <button type="button" class="btn btn-outline-secondary" onclick="previewEmail()">
+                Preview
             </button>
             <button type="submit" class="btn btn-primary">
-                <i data-feather="send"></i> Send Emails
+                Send Emails
             </button>
         </div>
     </form>
 </div>
 
-<!-- Email Statistics -->
-<div class="card">
-    <h2>Email Statistics</h2>
-    <div class="stats-grid">
-        <div class="stat-card">
-            <i data-feather="users"></i>
-            <div>
-                <h3><?= count($contacts) ?></h3>
-                <p>Total Contacts</p>
+<!-- Statistics -->
+<div class="card mt-4">
+    <h2 class="card-title">Email Statistics</h2>
+    <div class="row g-3">
+        <div class="col-md-4">
+            <div class="stat-card p-3 text-center border rounded">
+                <h3 class="mb-1"><?= count($contacts) ?></h3>
+                <p class="mb-0 text-muted">Total Contacts</p>
             </div>
         </div>
-        <div class="stat-card">
-            <i data-feather="file-text"></i>
-            <div>
-                <h3><?= count($blogs) ?></h3>
-                <p>Recent Blogs</p>
+        <div class="col-md-4">
+            <div class="stat-card p-3 text-center border rounded">
+                <h3 class="mb-1"><?= count($blogs) ?></h3>
+                <p class="mb-0 text-muted">Recent Blogs</p>
             </div>
         </div>
-        <div class="stat-card">
-            <i data-feather="briefcase"></i>
-            <div>
-                <h3><?= count($projects) ?></h3>
-                <p>Active Projects</p>
+        <div class="col-md-4">
+            <div class="stat-card p-3 text-center border rounded">
+                <h3 class="mb-1"><?= count($projects) ?></h3>
+                <p class="mb-0 text-muted">Active Projects</p>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-// Email type change handler
 document.getElementById('emailType').addEventListener('change', function() {
-    const blogSelection = document.getElementById('blogSelection');
-    const constructionFields = document.getElementById('constructionFields');
+    document.getElementById('blogSelection').style.display = 'none';
+    document.getElementById('constructionFields').style.display = 'none';
     
-    // Hide all conditional fields
-    blogSelection.style.display = 'none';
-    constructionFields.style.display = 'none';
-    
-    // Show relevant fields
     if (this.value === 'blog_notification') {
-        blogSelection.style.display = 'block';
+        document.getElementById('blogSelection').style.display = 'block';
     } else if (this.value === 'construction_update') {
-        constructionFields.style.display = 'block';
+        document.getElementById('constructionFields').style.display = 'block';
     }
 });
 
-// Select all checkbox handler
 document.getElementById('selectAll').addEventListener('change', function() {
-    const checkboxes = document.querySelectorAll('.recipient-checkbox');
-    checkboxes.forEach(cb => cb.checked = this.checked);
+    document.querySelectorAll('.recipient-checkbox').forEach(cb => cb.checked = this.checked);
 });
 
-// Preview email function
 function previewEmail() {
     const subject = document.querySelector('[name="subject"]').value;
     const message = document.querySelector('[name="custom_message"]').value;
     
     if (!subject || !message) {
-        alert('Please fill in subject and message to preview.');
+        alert('Please fill subject and message first.');
         return;
     }
     
-    const previewWindow = window.open('', 'Email Preview', 'width=600,height=800');
-    previewWindow.document.write(`
-        <html>
-        <head>
-            <title>Email Preview</title>
-            <style>
-                body { font-family: Arial, sans-serif; padding: 20px; background: #f9fafb; }
-                .preview { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-                h2 { color: #004AAD; }
-            </style>
-        </head>
-        <body>
-            <div class="preview">
-                <h2>${subject}</h2>
-                <div>${message.replace(/\n/g, '<br>')}</div>
-            </div>
-        </body>
-        </html>
+    const win = window.open('', 'Preview', 'width=650,height=800');
+    win.document.write(`
+        <html><head><title>Preview</title>
+        <style>
+            body { font-family: Arial; background: #f4f4f4; padding: 20px; }
+            .email { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; }
+            h2 { color: #1A1A1A; }
+        </style>
+        </head><body>
+        <div class="email">
+            <h2>${subject}</h2>
+            <div>${message.replace(/\n/g, '<br>')}</div>
+        </div>
+        </body></html>
     `);
 }
 
-// Form validation
 document.getElementById('emailForm').addEventListener('submit', function(e) {
-    const selectedRecipients = document.querySelectorAll('.recipient-checkbox:checked');
-    const selectAll = document.getElementById('selectAll').checked;
+    const selected = document.querySelectorAll('.recipient-checkbox:checked').length;
+    const all = document.getElementById('selectAll').checked;
     
-    if (!selectAll && selectedRecipients.length === 0) {
+    if (!all && selected === 0) {
         e.preventDefault();
         alert('Please select at least one recipient.');
-        return false;
+        return;
     }
     
-    if (!confirm(`Are you sure you want to send this email to ${selectAll ? 'all contacts' : selectedRecipients.length + ' recipient(s)'}?`)) {
+    if (!confirm(`Send to ${all ? 'all contacts' : selected + ' recipient(s)'}?`)) {
         e.preventDefault();
-        return false;
     }
 });
 </script>
-
-<style>
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1.5rem;
-    margin-top: 1.5rem;
-}
-
-.stat-card {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1.5rem;
-    background: #f9fafb;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
-}
-
-.stat-card i {
-    width: 40px;
-    height: 40px;
-    color: #004AAD;
-}
-
-.stat-card h3 {
-    font-size: 2rem;
-    margin: 0;
-    color: #004AAD;
-}
-
-.stat-card p {
-    margin: 0;
-    color: #64748b;
-    font-size: 0.9rem;
-}
-
-.form-actions {
-    display: flex;
-    gap: 1rem;
-    margin-top: 2rem;
-}
-</style>
 
 <?php require_once __DIR__ . '/includes/admin_footer.php'; ?>
