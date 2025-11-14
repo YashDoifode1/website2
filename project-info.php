@@ -1,473 +1,473 @@
 <?php
 /**
- * Project Info Page - Grand Jyothi Construction
- * Professional Single Project View with Gallery, Sidebar & Related Projects
- * BuildDream Theme: Yellow + Charcoal
+ * Project Info Page – Grand Jyothi Construction
+ * Modern design 100% aligned with blog‑detail.php
  */
 
 declare(strict_types=1);
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/security.php';
 
-if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
-    header("Location: projects.php");
-    exit;
+/* ---------- Helper ---------- */
+function currentUrl(): string {
+    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    return $protocol . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
 }
 
+/* ---------- Validate ID ---------- */
+if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
+    header('Location: projects.php');
+    exit;
+}
 $project_id = (int)$_GET['id'];
 
-// Fetch main project
-$sql = "SELECT id, title, location, description, type, status, completed_on, size, duration, created_at
+/* ---------- Main Project ---------- */
+$sql = "SELECT id, title, location, description, type, status,
+               completed_on, size, duration, created_at
         FROM projects WHERE id = ?";
 $stmt = executeQuery($sql, [$project_id]);
 $project = $stmt->fetch(PDO::FETCH_ASSOC);
-
 if (!$project) {
-    header("Location: projects.php");
+    header('Location: projects.php');
     exit;
 }
 
-// Fetch gallery images
-$imgStmt = executeQuery("SELECT image_path, caption FROM project_images WHERE project_id = ? ORDER BY id ASC", [$project_id]);
+/* ---------- Gallery ---------- */
+$imgStmt = executeQuery(
+    "SELECT image_path, caption FROM project_images WHERE project_id = ? ORDER BY id ASC",
+    [$project_id]
+);
 $images = $imgStmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Fetch 3 related projects (same type, exclude current)
-$relatedStmt = executeQuery("
-    SELECT id, title, location, 
-           (SELECT image_path FROM project_images WHERE project_id = p.id LIMIT 1) as thumb
-    FROM projects p 
-    WHERE type = ? AND id != ? AND status = 'completed'
-    ORDER BY completed_on DESC LIMIT 3
-", [$project['type'], $project_id]);
-$related = $relatedStmt->fetchAll(PDO::FETCH_ASSOC);
+/* ---------- Related (same type) ---------- */
+$related_projects = executeQuery(
+    "SELECT p.id, p.title, p.location,
+            (SELECT image_path FROM project_images WHERE project_id = p.id LIMIT 1) AS thumb
+     FROM projects p
+     WHERE p.type = ? AND p.id != ? AND p.status = 'completed'
+     ORDER BY p.completed_on DESC LIMIT 3",
+    [$project['type'], $project_id]
+)->fetchAll();
 
-$page_title = sanitizeOutput($project['title']) . " | Grand Jyothi Construction";
+/* ---------- Prev / Next (same type) ---------- */
+$prev_project = executeQuery(
+    "SELECT id, title FROM projects
+     WHERE completed_on < ? AND type = ?
+     ORDER BY completed_on DESC LIMIT 1",
+    [$project['completed_on'] ?? $project['created_at'], $project['type']]
+)->fetch();
+
+$next_project = executeQuery(
+    "SELECT id, title FROM projects
+     WHERE completed_on > ? AND type = ?
+     ORDER BY completed_on ASC LIMIT 1",
+    [$project['completed_on'] ?? $project['created_at'], $project['type']]
+)->fetch();
+
+/* ---------- Sidebar data ---------- */
+/* Types + counts */
+$types = executeQuery(
+    "SELECT type, COUNT(*) AS count
+     FROM projects
+     WHERE type IS NOT NULL AND type <> ''
+     GROUP BY type
+     ORDER BY type"
+)->fetchAll();
+
+/* Total projects */
+$total_projects = executeQuery("SELECT COUNT(*) FROM projects")->fetchColumn();
+
+/* Popular projects (latest) */
+$popular_projects = executeQuery(
+    "SELECT p.id, p.title, p.location,
+            (SELECT image_path FROM project_images WHERE project_id = p.id LIMIT 1) AS thumb
+     FROM projects p
+     ORDER BY p.created_at DESC LIMIT 3"
+)->fetchAll();
+
+/* ---------- Page title ---------- */
+$page_title = sanitizeOutput($project['title']) . ' | Grand Jyothi Construction';
 require_once __DIR__ . '/includes/header.php';
 ?>
 
-<!-- Breadcrumb -->
-<nav aria-label="breadcrumb" class="container py-4">
-    <ol class="breadcrumb mb-0">
-        <li class="breadcrumb-item"><a href="/constructioninnagpur/">Home</a></li>
-        <li class="breadcrumb-item"><a href="/constructioninnagpur/projects.php">Projects</a></li>
-        <li class="breadcrumb-item active" aria-current="page"><?= sanitizeOutput($project['title']) ?></li>
-    </ol>
-</nav>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?= $page_title ?></title>
 
-<!-- Hero Header -->
-<section class="project-hero">
+    <!-- Bootstrap 5 + Font Awesome + Google Fonts -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+
+    <style>
+        :root{
+            --primary-yellow:#F9A826;--charcoal:#1A1A1A;--white:#fff;
+            --light-gray:#f8f9fa;--medium-gray:#e9ecef;
+        }
+        body{font-family:'Roboto',sans-serif;color:var(--charcoal);background:var(--white);line-height:1.6;}
+        h1,h2,h3,h4,h5,h6{font-family:'Poppins',sans-serif;font-weight:600;}
+
+        /* ==== BUTTONS ==== */
+        .btn-primary{background:var(--primary-yellow);border-color:var(--primary-yellow);color:var(--charcoal);font-weight:600;padding:10px 25px;border-radius:8px;}
+        .btn-primary:hover{background:#e89a1f;border-color:#e89a1f;color:var(--charcoal);}
+
+        /* ==== HERO ==== */
+        .project-banner{height:500px;background:linear-gradient(rgba(26,26,26,.6),rgba(26,26,26,.6)),
+            url('/constructioninnagpur/assets/images/projects/<?= htmlspecialchars($images[0]['image_path'] ?? '') ?>') center/cover no-repeat;
+            display:flex;align-items:flex-end;padding:60px 0;color:var(--white);position:relative;}
+        .project-banner::before{content:'';position:absolute;inset:0;
+            background:linear-gradient(135deg,rgba(249,168,38,.1) 0%,transparent 70%);}
+        .project-title{font-size:3rem;margin-bottom:20px;line-height:1.2;}
+        .project-meta{display:flex;flex-wrap:wrap;gap:15px;align-items:center;}
+        .badge-type,.badge-status{background:var(--primary-yellow);color:var(--charcoal);padding:5px 15px;border-radius:20px;font-size:.9rem;font-weight:600;}
+        .badge-status{background:<?= $project['status']==='completed'?'#28a745':($project['status']==='current'?'#ffc107':'#17a2b8') ?>;
+            color:<?= $project['status']==='current'?'var(--charcoal)':'var(--white)' ?>;}
+
+        /* ==== CONTENT ==== */
+        .project-content-section{padding:80px 0;}
+        .project-content{font-size:1.1rem;line-height:1.8;}
+        .project-content h2{font-size:1.8rem;margin:40px 0 20px;padding-bottom:10px;border-bottom:2px solid var(--primary-yellow);}
+        .project-content img{max-width:100%;border-radius:8px;margin:30px 0;box-shadow:0 5px 15px rgba(0,0,0,.1);}
+
+        /* ==== GALLERY ==== */
+        .main-gallery-image{height:520px;object-fit:cover;border-radius:12px;cursor:zoom-in;transition:.4s;}
+        .main-gallery-image:hover{transform:scale(1.02);}
+        .thumb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:12px;margin-top:20px;}
+        .thumb-img{height:100px;object-fit:cover;border-radius:8px;cursor:pointer;border:3px solid transparent;transition:.3s;}
+        .thumb-img.active,.thumb-img:hover{border-color:var(--primary-yellow);transform:scale(1.05);box-shadow:0 5px 15px rgba(0,0,0,.2);}
+
+        /* ==== SIDEBAR ==== */
+        .sidebar{background:var(--light-gray);border-radius:10px;padding:30px;margin-bottom:30px;}
+        .sidebar-title{font-size:1.2rem;margin-bottom:20px;padding-bottom:10px;border-bottom:2px solid var(--primary-yellow);display:inline-block;}
+        .search-box{position:relative;margin-bottom:30px;}
+        .search-box input{width:100%;padding:12px 15px;border-radius:5px;border:1px solid #ddd;}
+        .search-box button{position:absolute;right:5px;top:5px;background:var(--primary-yellow);border:none;color:var(--charcoal);padding:7px 15px;border-radius:5px;font-weight:600;}
+        .category-list{list-style:none;padding:0;}
+        .category-list li{padding:10px 0;border-bottom:1px solid #eee;}
+        .category-list li:last-child{border:none;}
+        .category-list a{display:flex;justify-content:space-between;align-items:center;color:var(--charcoal);text-decoration:none;transition:.3s;}
+        .category-list a:hover,.category-list a.active{color:var(--primary-yellow);font-weight:600;}
+        .category-count{background:var(--charcoal);color:var(--white);padding:3px 8px;border-radius:10px;font-size:.8rem;}
+        .popular-post{display:flex;margin-bottom:15px;padding-bottom:15px;border-bottom:1px solid #eee;}
+        .popular-post:last-child{margin-bottom:0;padding-bottom:0;border:none;}
+        .popular-post-image{width:70px;height:70px;border-radius:5px;overflow:hidden;margin-right:15px;flex-shrink:0;}
+        .popular-post-image img{width:100%;height:100%;object-fit:cover;}
+        .popular-post-title{font-size:.9rem;margin-bottom:5px;}
+        .popular-post-title a{color:var(--charcoal);text-decoration:none;transition:.3s;}
+        .popular-post-title a:hover{color:var(--primary-yellow);}
+
+        /* ==== SHARE ==== */
+        .social-share{display:flex;align-items:center;gap:10px;margin:40px 0;}
+        .social-icon{width:40px;height:40px;border-radius:50%;background:var(--light-gray);color:var(--charcoal);
+            display:flex;align-items:center;justify-content:center;transition:.3s;}
+        .social-icon:hover{transform:translateY(-3px);}
+        .whatsapp:hover{background:#25d366;color:#fff;}
+        .facebook:hover{background:#3b5998;color:#fff;}
+        .linkedin:hover{background:#0077b5;color:#fff;}
+
+        /* ==== NAVIGATION ==== */
+        .project-navigation{display:flex;justify-content:space-between;padding:40px 0;border-top:1px solid #eee;border-bottom:1px solid #eee;margin:40px 0;}
+        .nav-project{max-width:45%;}
+        .nav-project a{display:flex;align-items:center;text-decoration:none;color:var(--charcoal);transition:.3s;}
+        .nav-project a:hover{color:var(--primary-yellow);}
+        .nav-icon{font-size:1.5rem;margin:0 15px;}
+
+        /* ==== RELATED ==== */
+        .related-project-card{background:var(--white);border-radius:10px;overflow:hidden;box-shadow:0 5px 15px rgba(0,0,0,.05);transition:.3s;height:100%;}
+        .related-project-card:hover{transform:translateY(-5px);box-shadow:0 10px 25px rgba(0,0,0,.1);}
+        .related-project-image{height:200px;overflow:hidden;}
+        .related-project-image img{width:100%;height:100%;object-fit:cover;transition:.5s;}
+        .related-project-card:hover .related-project-image img{transform:scale(1.05);}
+        .related-project-content{padding:20px;}
+        .related-project-title a{color:var(--charcoal);text-decoration:none;transition:.3s;}
+        .related-project-title a:hover{color:var(--primary-yellow);}
+
+        /* ==== LIGHTBOX ==== */
+        .lightbox-overlay{position:fixed;inset:0;background:rgba(0,0,0,.95);display:flex;justify-content:center;align-items:center;z-index:9999;cursor:zoom-out;animation:fadeIn .3s;}
+        .lightbox-img{max-width:95vw;max-height:95vh;border-radius:12px;box-shadow:0 20px 50px rgba(0,0,0,.8);animation:zoomIn .3s;}
+        .lightbox-close{position:absolute;top:20px;right:30px;font-size:3rem;color:#fff;cursor:pointer;font-weight:300;}
+        .lightbox-close:hover{transform:scale(1.2);}
+        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+        @keyframes zoomIn{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}
+
+        /* ==== RESPONSIVE ==== */
+        @media (max-width:768px){
+            .project-banner{height:400px;padding:40px 0;}
+            .project-title{font-size:2.2rem;}
+            .main-gallery-image{height:350px;}
+            .project-navigation{flex-direction:column;}
+            .nav-project{max-width:100%;margin-bottom:20px;}
+            .nav-project.next a{flex-direction:row;}
+        }
+    </style>
+</head>
+<body>
+
+<!-- ====================== HERO ====================== -->
+<section class="project-banner">
     <div class="container">
-        <div class="text-center">
-            <h1 class="display-5 fw-bold mb-3"><?= sanitizeOutput($project['title']) ?></h1>
-            <div class="d-flex justify-content-center align-items-center flex-wrap gap-3">
-                <p class="lead mb-0">
-                    <i class="fas fa-map-marker-alt me-1"></i> <?= sanitizeOutput($project['location']) ?>
-                </p>
-                <span class="badge <?= $project['status'] === 'completed' ? 'bg-success' : ($project['status'] === 'current' ? 'bg-warning text-dark' : 'bg-info') ?> px-3 py-2">
-                    <?= ucfirst($project['status']) ?> Project
-                </span>
+        <div class="project-banner-content position-relative z-2">
+            <h1 class="project-title"><?= sanitizeOutput($project['title']) ?></h1>
+            <div class="project-meta">
+                <div class="badge-type"><?= ucfirst(sanitizeOutput($project['type'])) ?></div>
+                <div class="badge-status"><?= ucfirst($project['status']) ?> Project</div>
+                <div class="meta-item"><i class="fas fa-map-marker-alt"></i> <?= sanitizeOutput($project['location']) ?></div>
             </div>
         </div>
     </div>
 </section>
 
-<main class="section-padding bg-light">
+<!-- ====================== MAIN CONTENT ====================== -->
+<section class="project-content-section">
     <div class="container">
-        <div class="row g-5">
-            <!-- Gallery Column -->
-            <div class="col-lg-8">
-                <div class="project-gallery">
-                    <!-- Main Image -->
-                    <?php if (!empty($images)): ?>
-                        <div class="main-image mb-4 rounded-4 overflow-hidden shadow-lg position-relative">
-                            <img id="mainProjectImage" 
-                                 src="/constructioninnagpur/assets/images/projects/<?= htmlspecialchars($images[0]['image_path']) ?>"
-                                 alt="<?= sanitizeOutput($project['title']) ?>"
-                                 class="img-fluid w-100"
-                                 style="height: 520px; object-fit: cover; cursor: zoom-in;">
-                            <div class="image-zoom-indicator position-absolute top-0 end-0 m-3 bg-dark bg-opacity-50 text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-                                <i class="fas fa-expand"></i>
-                            </div>
-                        </div>
+        <div class="row">
 
-                        <!-- Thumbnails -->
+            <!-- ==== LEFT COLUMN (Gallery + Description + Nav + Related) ==== -->
+            <div class="col-lg-8">
+
+                <!-- Gallery -->
+                <div class="mb-5">
+                    <?php if (!empty($images)): ?>
+                        <img id="mainGalleryImage"
+                             src="/constructioninnagpur/assets/images/projects/<?= htmlspecialchars($images[0]['image_path']) ?>"
+                             alt="<?= sanitizeOutput($project['title']) ?>"
+                             class="img-fluid w-100 main-gallery-image">
                         <?php if (count($images) > 1): ?>
-                            <div class="thumbnails row g-3">
-                                <?php foreach ($images as $index => $img): ?>
-                                    <div class="col-3">
-                                        <div class="thumbnail-wrapper position-relative">
-                                            <img src="/assets/images/projects/<?= htmlspecialchars($img['image_path']) ?>"
-                                                 alt="<?= htmlspecialchars($img['caption'] ?? '') ?>"
-                                                 class="img-thumbnail thumb-img rounded-3 w-100"
-                                                 style="height: 100px; object-fit: cover; cursor: pointer; border: <?= $index === 0 ? '3px solid var(--primary-yellow)' : '2px solid #e9ecef' ?>;"
-                                                 onclick="changeMainImage(this.src, this)">
-                                            <?php if ($img['caption']): ?>
-                                                <div class="thumbnail-caption position-absolute bottom-0 start-0 end-0 bg-dark bg-opacity-75 text-white text-center py-1 small">
-                                                    <?= htmlspecialchars($img['caption']) ?>
-                                                </div>
-                                            <?php endif; ?>
-                                        </div>
-                                    </div>
+                            <div class="thumb-grid mt-4">
+                                <?php foreach ($images as $i => $img): ?>
+                                    <img src="/constructioninnagpur/assets/images/projects/<?= htmlspecialchars($img['image_path']) ?>"
+                                         alt="<?= htmlspecialchars($img['caption'] ?? '') ?>"
+                                         class="thumb-img <?= $i===0?'active':'' ?>"
+                                         onclick="changeMainImage(this.src,this)">
                                 <?php endforeach; ?>
                             </div>
                         <?php endif; ?>
                     <?php else: ?>
-                        <div class="main-image mb-4 rounded-4 overflow-hidden shadow-lg position-relative">
-                            <img src="https://via.placeholder.com/1200x600/1A1A1A/F9A826?text=<?= urlencode($project['title']) ?>"
-                                 alt="No image" class="img-fluid w-100" style="height: 520px; object-fit: cover;">
-                            <div class="placeholder-overlay position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-dark bg-opacity-25">
-                                <div class="text-center text-white">
-                                    <i class="fas fa-image fa-3x mb-3"></i>
-                                    <p class="mb-0">No project images available</p>
+                        <img src="https://via.placeholder.com/1200x520/1A1A1A/F9A826?text=No+Image"
+                             class="img-fluid w-100 main-gallery-image" alt="No image">
+                    <?php endif; ?>
+                </div>
+
+                <!-- Description -->
+                <div class="project-content mb-5">
+                    <?= nl2br(sanitizeOutput($project['description'] ?: 'A premium construction project showcasing excellence in design, quality, and timely delivery.')) ?>
+                </div>
+
+                <!-- ==== SHARE ==== -->
+                <div class="social-share">
+                    <span class="fw-bold me-2">Share:</span>
+                    <a href="https://wa.me/?text=Check%20out%20this%20project:%20<?= urlencode(currentUrl()) ?>"
+                       target="_blank" class="social-icon whatsapp"><i class="fab fa-whatsapp"></i></a>
+                    <a href="https://www.facebook.com/sharer/sharer.php?u=<?= urlencode(currentUrl()) ?>"
+                       target="_blank" class="social-icon facebook"><i class="fab fa-facebook-f"></i></a>
+                    <a href="https://www.linkedin.com/shareArticle?mini=true&url=<?= urlencode(currentUrl()) ?>"
+                       target="_blank" class="social-icon linkedin"><i class="fab fa-linkedin-in"></i></a>
+                </div>
+
+                <!-- ==== PREV / NEXT ==== -->
+                <div class="project-navigation">
+                    <?php if ($prev_project): ?>
+                        <div class="nav-project prev">
+                            <a href="project-info.php?id=<?= $prev_project['id'] ?>">
+                                <div class="nav-icon"><i class="fas fa-arrow-left"></i></div>
+                                <div>
+                                    <div class="text-muted small">Previous Project</div>
+                                    <div class="nav-project-title"><?= sanitizeOutput($prev_project['title']) ?></div>
                                 </div>
+                            </a>
+                        </div>
+                    <?php else: ?><div></div><?php endif; ?>
+
+                    <?php if ($next_project): ?>
+                        <div class="nav-project next">
+                            <a href="project-info.php?id=<?= $next_project['id'] ?>">
+                                <div class="nav-icon"><i class="fas fa-arrow-right"></i></div>
+                                <div>
+                                    <div class="text-muted small">Next Project</div>
+                                    <div class="nav-project-title"><?= sanitizeOutput($next_project['title']) ?></div>
+                                </div>
+                            </a>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
+                <!-- ==== RELATED PROJECTS ==== -->
+                <?php if (!empty($related_projects)): ?>
+                    <div class="related-projects mt-5">
+                        <h3 class="section-title mb-4">Similar Projects</h3>
+                        <div class="row g-4">
+                            <?php foreach ($related_projects as $r):
+                                $thumb = $r['thumb']
+                                    ? "/constructioninnagpur/assets/images/projects/{$r['thumb']}"
+                                    : "https://via.placeholder.com/400x300";
+                            ?>
+                                <div class="col-md-4">
+                                    <a href="project-info.php?id=<?= $r['id'] ?>" class="text-decoration-none">
+                                        <div class="related-project-card">
+                                            <div class="related-project-image">
+                                                <img src="<?= $thumb ?>" alt="<?= sanitizeOutput($r['title']) ?>">
+                                            </div>
+                                            <div class="related-project-content">
+                                                <h4 class="related-project-title">
+                                                    <?= sanitizeOutput($r['title']) ?>
+                                                </h4>
+                                                <p class="text-muted small mb-0"><i class="fas fa-map-marker-alt me-1"></i> <?= sanitizeOutput($r['location']) ?></p>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
+            </div>
+
+            <!-- ==== RIGHT SIDEBAR ==== -->
+            <div class="col-lg-4">
+
+                <!-- 1. SEARCH -->
+                <div class="sidebar">
+                    <h3 class="sidebar-title">Search Projects</h3>
+                    <form action="/constructioninnagpur/projects.php" method="get" class="search-box">
+                        <input type="text" name="search" placeholder="Search projects..." value="<?= sanitizeOutput($_GET['search'] ?? '') ?>">
+                        <button type="submit"><i class="fas fa-search"></i></button>
+                    </form>
+                </div>
+
+                <!-- 2. PROJECT DETAILS -->
+                <div class="sidebar">
+                    <h3 class="sidebar-title">Project Details</h3>
+
+                    <?php if ($project['size']): ?>
+                        <div class="d-flex align-items-start mb-3">
+                            <div class="detail-icon me-3"><i class="fas fa-ruler-combined"></i></div>
+                            <div>
+                                <div class="detail-label">Size</div>
+                                <div class="detail-value fw-bold"><?= sanitizeOutput($project['size']) ?> sq.ft</div>
                             </div>
                         </div>
                     <?php endif; ?>
-                </div>
-            </div>
-
-            <!-- Sidebar Info -->
-            <div class="col-lg-4">
-                <div class="project-sidebar bg-white rounded-4 shadow-sm p-4 position-sticky" style="top: 100px;">
-                    <h3 class="h4 fw-bold mb-4 text-charcoal border-bottom pb-3">Project Details</h3>
-                    
-                    <div class="info-item d-flex align-items-start mb-4">
-                        <div class="icon me-3 text-yellow bg-yellow-soft rounded-circle d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
-                            <i class="fas fa-building"></i>
-                        </div>
-                        <div>
-                            <strong class="d-block mb-1">Project Type</strong>
-                            <p class="mb-0 text-capitalize text-muted"><?= ucfirst($project['type']) ?></p>
-                        </div>
-                    </div>
-
-                    <div class="info-item d-flex align-items-start mb-4">
-                        <div class="icon me-3 text-yellow bg-yellow-soft rounded-circle d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
-                            <i class="fas fa-tasks"></i>
-                        </div>
-                        <div>
-                            <strong class="d-block mb-1">Status</strong>
-                            <p class="mb-0">
-                                <span class="badge <?= $project['status'] === 'completed' ? 'bg-success' : ($project['status'] === 'current' ? 'bg-warning text-dark' : 'bg-info') ?> px-3 py-2 rounded-pill">
-                                    <?= ucfirst($project['status']) ?>
-                                </span>
-                            </p>
-                        </div>
-                    </div>
-
-                    <?php if ($project['size']): ?>
-                    <div class="info-item d-flex align-items-start mb-4">
-                        <div class="icon me-3 text-yellow bg-yellow-soft rounded-circle d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
-                            <i class="fas fa-ruler-combined"></i>
-                        </div>
-                        <div>
-                            <strong class="d-block mb-1">Project Size</strong>
-                            <p class="mb-0 fw-bold text-muted"><?= sanitizeOutput($project['size']) ?> sq.ft</p>
-                        </div>
-                    </div>
-                    <?php endif; ?>
 
                     <?php if ($project['duration']): ?>
-                    <div class="info-item d-flex align-items-start mb-4">
-                        <div class="icon me-3 text-yellow bg-yellow-soft rounded-circle d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
-                            <i class="far fa-clock"></i>
+                        <div class="d-flex align-items-start mb-3">
+                            <div class="detail-icon me-3"><i class="far fa-clock"></i></div>
+                            <div>
+                                <div class="detail-label">Duration</div>
+                                <div class="detail-value"><?= sanitizeOutput($project['duration']) ?> months</div>
+                            </div>
                         </div>
-                        <div>
-                            <strong class="d-block mb-1">Duration</strong>
-                            <p class="mb-0 text-muted"><?= sanitizeOutput($project['duration']) ?> months</p>
-                        </div>
-                    </div>
                     <?php endif; ?>
 
                     <?php if ($project['completed_on']): ?>
-                    <div class="info-item d-flex align-items-start mb-4">
-                        <div class="icon me-3 text-yellow bg-yellow-soft rounded-circle d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
-                            <i class="far fa-calendar-check"></i>
+                        <div class="d-flex align-items-start mb-3">
+                            <div class="detail-icon me-3"><i class="far fa-calendar-check"></i></div>
+                            <div>
+                                <div class="detail-label">Completed</div>
+                                <div class="detail-value"><?= date('F Y', strtotime($project['completed_on'])) ?></div>
+                            </div>
                         </div>
-                        <div>
-                            <strong class="d-block mb-1">Completed</strong>
-                            <p class="mb-0 text-muted"><?= date('F Y', strtotime($project['completed_on'])) ?></p>
-                        </div>
-                    </div>
                     <?php endif; ?>
 
-                    <div class="info-item d-flex align-items-start mb-4">
-                        <div class="icon me-3 text-yellow bg-yellow-soft rounded-circle d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
-                            <i class="fas fa-hard-hat"></i>
-                        </div>
+                    <div class="d-flex align-items-start mb-3">
+                        <div class="detail-icon me-3"><i class="fas fa-hard-hat"></i></div>
                         <div>
-                            <strong class="d-block mb-1">Started</strong>
-                            <p class="mb-0 text-muted"><?= date('F Y', strtotime($project['created_at'])) ?></p>
+                            <div class="detail-label">Started</div>
+                            <div class="detail-value"><?= date('F Y', strtotime($project['created_at'])) ?></div>
                         </div>
                     </div>
 
                     <hr class="my-4">
-
-                    <div class="d-grid gap-3">
-                        <a href="/constructioninnagpur/contact.php" class="btn btn-primary btn-lg py-3 fw-semibold">
-                            <i class="fas fa-phone-alt me-2"></i> Get Similar Quote
+                    <div class="d-grid gap-2">
+                        <a href="/constructioninnagpur/contact.php" class="btn btn-primary">
+                            <i class="fas fa-phone-alt me-2"></i> Get Quote
                         </a>
-                        <a href="/constructioninnagpur/projects.php" class="btn btn-outline-dark py-3">
-                            <i class="fas fa-arrow-left me-2"></i> Back to Projects
+                        <a href="/constructioninnagpur/projects.php" class="btn btn-outline-dark">
+                            <i class="fas fa-arrow-left me-2"></i> All Projects
                         </a>
-                    </div>
-
-                    <hr class="my-4">
-
-                    <div class="share-buttons">
-                        <strong class="d-block mb-3">Share Project</strong>
-                        <div class="d-flex gap-2 flex-wrap">
-                            <a href="https://wa.me/?text=Check%20out%20this%20amazing%20project%20by%20Grand%20Jyothi:%20<?= urlencode($_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI']) ?>"
-                               target="_blank" class="btn btn-success btn-sm rounded-pill px-3">
-                                <i class="fab fa-whatsapp me-1"></i> WhatsApp
-                            </a>
-                            <a href="https://www.facebook.com/sharer/sharer.php?u=<?= urlencode($_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI']) ?>"
-                               target="_blank" class="btn btn-primary btn-sm rounded-pill px-3">
-                                <i class="fab fa-facebook-f me-1"></i> Facebook
-                            </a>
-                            <a href="https://www.linkedin.com/shareArticle?mini=true&url=<?= urlencode($_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI']) ?>"
-                               target="_blank" class="btn btn-linkedin btn-sm rounded-pill px-3">
-                                <i class="fab fa-linkedin-in me-1"></i> LinkedIn
-                            </a>
-                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <!-- Description -->
-        <div class="row mt-5">
-            <div class="col-12">
-                <div class="bg-white rounded-4 shadow-sm p-5">
-                    <h3 class="h4 fw-bold mb-4 border-bottom pb-3">Project Overview</h3>
-                    <div class="project-description lead text-muted" style="line-height: 1.8;">
-                        <?= nl2br(sanitizeOutput($project['description'] ?: 'A premium construction project showcasing excellence in design, quality, and timely delivery.')) ?>
-                    </div>
+                <!-- 3. PROJECT TYPES (Categories) -->
+                <div class="sidebar">
+                    <h3 class="sidebar-title">Project Types</h3>
+                    <ul class="category-list">
+                        <li>
+                            <a href="/constructioninnagpur/projects.php" class="<?= empty($_GET['type']) ? 'active' : '' ?>">
+                                <span>All Projects</span>
+                                <span class="category-count"><?= $total_projects ?></span>
+                            </a>
+                        </li>
+                        <?php foreach ($types as $t): ?>
+                            <li>
+                                <a href="/constructioninnagpur/projects.php?type=<?= urlencode($t['type']) ?>"
+                                   class="<?= ($_GET['type'] ?? '') === $t['type'] ? 'active' : '' ?>">
+                                    <span><?= ucfirst(sanitizeOutput($t['type'])) ?></span>
+                                    <span class="category-count"><?= $t['count'] ?></span>
+                                </a>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
                 </div>
-            </div>
-        </div>
 
-        <!-- Related Projects -->
-        <?php if (!empty($related)): ?>
-        <div class="row mt-5">
-            <div class="col-12">
-                <h3 class="h4 fw-bold mb-4 border-bottom pb-3">Similar Projects</h3>
-                <div class="row g-4">
-                    <?php foreach ($related as $r): 
-                        $rThumb = $r['thumb'] ? "/constructioninnagpur/assets/images/projects/{$r['thumb']}" : "https://via.placeholder.com/400x300";
-                    ?>
-                        <div class="col-md-4">
-                            <a href="project-info.php?id=<?= $r['id'] ?>" class="text-decoration-none">
-                                <div class="card h-100 shadow-sm hover-card border-0 overflow-hidden">
-                                    <div class="card-img-wrapper position-relative overflow-hidden">
-                                        <img src="<?= $rThumb ?>" class="card-img-top" alt="<?= sanitizeOutput($r['title']) ?>" style="height: 220px; object-fit: cover;">
-                                        <div class="card-overlay position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-dark bg-opacity-0 transition-all">
-                                            <span class="text-white fw-semibold">View Details</span>
-                                        </div>
-                                    </div>
-                                    <div class="card-body">
-                                        <h6 class="card-title text-dark fw-bold"><?= sanitizeOutput($r['title']) ?></h6>
-                                        <p class="text-muted small mb-0"><i class="fas fa-map-marker-alt me-1"></i> <?= sanitizeOutput($r['location']) ?></p>
-                                    </div>
+                <!-- 4. POPULAR PROJECTS -->
+                <div class="sidebar">
+                    <h3 class="sidebar-title">Popular Projects</h3>
+                    <ul class="p-0 m-0">
+                        <?php foreach ($popular_projects as $p):
+                            $thumb = $p['thumb']
+                                ? "/constructioninnagpur/assets/images/projects/{$p['thumb']}"
+                                : "https://via.placeholder.com/70";
+                        ?>
+                            <li class="popular-post">
+                                <div class="popular-post-image">
+                                    <img src="<?= $thumb ?>" alt="<?= sanitizeOutput($p['title']) ?>" class="rounded">
                                 </div>
-                            </a>
-                        </div>
-                    <?php endforeach; ?>
+                                <div class="popular-post-content">
+                                    <h4 class="popular-post-title">
+                                        <a href="project-info.php?id=<?= $p['id'] ?>">
+                                            <?= sanitizeOutput($p['title']) ?>
+                                        </a>
+                                    </h4>
+                                    <div class="text-muted small"><i class="fas fa-map-marker-alt me-1"></i> <?= sanitizeOutput($p['location']) ?></div>
+                                </div>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
                 </div>
+
             </div>
         </div>
-        <?php endif; ?>
     </div>
-</main>
+</section>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
 
-<!-- Lightbox + Gallery Script -->
 <script>
-function changeMainImage(src, element) {
-    document.getElementById('mainProjectImage').src = src;
-    document.querySelectorAll('.thumb-img').forEach(img => {
-        img.style.border = '2px solid #e9ecef';
-    });
-    element.style.border = '3px solid #F9A826';
+/* Gallery */
+function changeMainImage(src, el){
+    document.getElementById('mainGalleryImage').src = src;
+    document.querySelectorAll('.thumb-img').forEach(i=>i.classList.remove('active'));
+    el.classList.add('active');
 }
 
-// Lightbox
-document.getElementById('mainProjectImage')?.addEventListener('click', function() {
-    const lightbox = document.createElement('div');
-    lightbox.className = 'lightbox-overlay';
-    lightbox.innerHTML = `
-        <div class="lightbox-content">
+/* Lightbox */
+document.getElementById('mainGalleryImage')?.addEventListener('click',function(){
+    const lb=document.createElement('div');
+    lb.className='lightbox-overlay';
+    lb.innerHTML=`
+        <div class="position-relative">
             <img src="${this.src}" class="lightbox-img">
             <span class="lightbox-close">×</span>
-        </div>
-    `;
-    document.body.appendChild(lightbox);
-    lightbox.querySelector('.lightbox-close').onclick = () => lightbox.remove();
-    lightbox.onclick = (e) => { if (e.target === lightbox) lightbox.remove(); };
-});
-
-// Add hover effects to cards
-document.addEventListener('DOMContentLoaded', function() {
-    const cards = document.querySelectorAll('.hover-card');
-    cards.forEach(card => {
-        card.addEventListener('mouseenter', function() {
-            const overlay = this.querySelector('.card-overlay');
-            if (overlay) {
-                overlay.classList.remove('bg-opacity-0');
-                overlay.classList.add('bg-opacity-70');
-            }
-        });
-        card.addEventListener('mouseleave', function() {
-            const overlay = this.querySelector('.card-overlay');
-            if (overlay) {
-                overlay.classList.remove('bg-opacity-70');
-                overlay.classList.add('bg-opacity-0');
-            }
-        });
-    });
+        </div>`;
+    document.body.appendChild(lb);
+    lb.querySelector('.lightbox-close').onclick=()=>lb.remove();
+    lb.onclick=e=>{if(e.target===lb) lb.remove();}
 });
 </script>
 
-<!-- Professional Styles -->
-<style>
-    :root {
-        --primary-yellow: #F9A826;
-        --charcoal: #1A1A1A;
-        --text-yellow: #F9A826;
-        --gray-light: #f8f9fa;
-        --yellow-soft: rgba(249,168,38,0.1);
-    }
-
-    .project-hero {
-        background: linear-gradient(135deg, var(--charcoal) 0%, #2d2d2d 100%);
-        color: white;
-        padding: 80px 0 60px;
-        margin-bottom: 40px;
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .project-hero::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="%23F9A826" opacity="0.03"><polygon points="0,0 100,0 50,100"/></svg>');
-        background-size: 150px;
-    }
-
-    .project-sidebar {
-        border-left: 4px solid var(--primary-yellow);
-    }
-
-    .bg-yellow-soft {
-        background-color: var(--yellow-soft);
-    }
-
-    .hover-card {
-        transition: all 0.4s ease;
-        border-radius: 12px;
-    }
-    .hover-card:hover {
-        transform: translateY(-10px);
-        box-shadow: 0 15px 35px rgba(0,0,0,0.15) !important;
-    }
-
-    .card-overlay {
-        transition: all 0.3s ease;
-        opacity: 0;
-    }
-    .hover-card:hover .card-overlay {
-        opacity: 1;
-    }
-
-    .thumb-img {
-        transition: all 0.3s ease;
-    }
-    .thumb-img:hover {
-        transform: scale(1.05);
-        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-    }
-
-    .thumbnail-wrapper {
-        overflow: hidden;
-        border-radius: 12px;
-    }
-
-    .thumbnail-caption {
-        font-size: 0.75rem;
-        opacity: 0;
-        transition: opacity 0.3s ease;
-    }
-    .thumbnail-wrapper:hover .thumbnail-caption {
-        opacity: 1;
-    }
-
-    .image-zoom-indicator {
-        opacity: 0;
-        transition: opacity 0.3s ease;
-    }
-    .main-image:hover .image-zoom-indicator {
-        opacity: 1;
-    }
-
-    .lightbox-overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.95);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 9999;
-        cursor: zoom-out;
-        animation: fadeIn 0.3s ease;
-    }
-    .lightbox-img {
-        max-width: 95vw;
-        max-height: 95vh;
-        border-radius: 12px;
-        box-shadow: 0 20px 50px rgba(0,0,0,0.8);
-        animation: zoomIn 0.3s ease;
-    }
-    .lightbox-close {
-        position: absolute;
-        top: 20px;
-        right: 30px;
-        font-size: 3rem;
-        color: white;
-        cursor: pointer;
-        font-weight: 300;
-        transition: transform 0.2s ease;
-    }
-    .lightbox-close:hover {
-        transform: scale(1.2);
-    }
-
-    .btn-linkedin {
-        background: #0077b5 !important;
-    }
-
-    .project-description {
-        font-size: 1.1rem;
-    }
-
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-    }
-
-    @keyframes zoomIn {
-        from { transform: scale(0.9); opacity: 0; }
-        to { transform: scale(1); opacity: 1; }
-    }
-
-    @media (max-width: 768px) {
-        .project-hero { padding: 60px 0 40px; }
-        .main-image img { height: 350px !important; }
-        .thumbnails { justify-content: center; }
-        .project-sidebar { position: static !important; }
-    }
-</style>
+</body>
+</html>
