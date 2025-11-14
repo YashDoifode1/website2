@@ -1,8 +1,7 @@
 <?php
 /**
  * Home Page - Grand Jyothi Construction
- * DB-Powered Packages in Estimate + Display
- * Uniform Header/Footer | Yellow + Charcoal
+ * Full Package Display (with Accordions) + Estimator
  */
 
 declare(strict_types=1);
@@ -12,7 +11,7 @@ require_once __DIR__ . '/includes/header.php';
 
 $page_title = 'Grand Jyothi Construction | Build Your Dream Home';
 
-// Fetch active packages for estimator & display
+// Fetch all active packages
 $packages = executeQuery("
     SELECT id, title, price_per_sqft, description, features 
     FROM packages 
@@ -20,17 +19,25 @@ $packages = executeQuery("
     ORDER BY display_order ASC, created_at DESC
 ")->fetchAll(PDO::FETCH_ASSOC);
 
-if (empty($packages)) {
-    $packages = []; // Fallback
+// Fetch package sections (accordions)
+$sections = executeQuery("
+    SELECT package_id, title, content
+    FROM package_sections
+    WHERE is_active = 1
+    ORDER BY display_order ASC
+")->fetchAll(PDO::FETCH_ASSOC);
+
+// Group sections by package_id
+$package_sections = [];
+foreach ($sections as $s) {
+    $package_sections[$s['package_id']][] = $s;
 }
 
-// Fetch other sections
-$services = executeQuery("SELECT * FROM services ORDER BY created_at DESC LIMIT 6")->fetchAll();
-$projects = executeQuery("SELECT * FROM projects ORDER BY created_at DESC LIMIT 6")->fetchAll();
+// Fetch testimonials
 $testimonials = executeQuery("
-    SELECT t.*, p.title as project_title 
-    FROM testimonials t 
-    LEFT JOIN projects p ON t.project_id = p.id 
+    SELECT t.*, p.title AS project_title 
+    FROM testimonials t
+    LEFT JOIN projects p ON t.project_id = p.id
     ORDER BY t.created_at DESC LIMIT 6
 ")->fetchAll();
 ?>
@@ -46,53 +53,43 @@ $testimonials = executeQuery("
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-    
-    <!-- Page Styles (Uniform) -->
+
     <style>
         :root {
             --primary-yellow: #F9A826;
             --charcoal: #1A1A1A;
-            --white: #FFFFFF;
             --light-gray: #f8f9fa;
-            --text-muted: #666;
-            --border-color: #eee;
+            --border-color: #e5e5e5;
         }
-
         body {
             font-family: 'Roboto', sans-serif;
             color: var(--charcoal);
-            background-color: var(--white);
-            line-height: 1.6;
+            background-color: #fff;
         }
-
-        h1, h2, h3, h4, h5, h6 {
-            font-family: 'Poppins', sans-serif;
-            font-weight: 600;
-        }
+        h1, h2, h3, h4 { font-family: 'Poppins', sans-serif; font-weight: 600; }
 
         .btn-primary {
             background-color: var(--primary-yellow);
-            border-color: var(--primary-yellow);
+            border: none;
             color: var(--charcoal);
             font-weight: 600;
-            padding: 12px 30px;
             border-radius: 8px;
+            padding: 12px 30px;
             transition: all 0.3s ease;
         }
         .btn-primary:hover {
             background-color: #e89a1f;
-            border-color: #e89a1f;
             transform: translateY(-2px);
             box-shadow: 0 6px 16px rgba(249, 168, 38, 0.3);
         }
 
         .btn-outline-primary {
-            border-color: var(--primary-yellow);
+            border: 2px solid var(--primary-yellow);
             color: var(--primary-yellow);
             font-weight: 600;
-            padding: 10px 25px;
             border-radius: 8px;
-            transition: all 0.3s ease;
+            padding: 10px 25px;
+            transition: 0.3s;
         }
         .btn-outline-primary:hover {
             background-color: var(--primary-yellow);
@@ -101,113 +98,68 @@ $testimonials = executeQuery("
 
         /* Hero */
         .hero-section {
-            background: linear-gradient(rgba(26, 26, 26, 0.75), rgba(26, 26, 26, 0.75)),
-                        url('https://images.unsplash.com/photo-1541888946425-d81bb19240f5?ixlib=rb-4.0.3&auto=format&fit=crop&w=1770&q=80') center/cover no-repeat;
-            color: var(--white);
-            padding: 150px 0;
+            background: linear-gradient(rgba(26,26,26,0.7), rgba(26,26,26,0.7)),
+                        url('https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=1770&q=80') center/cover;
+            color: #fff;
             text-align: center;
+            padding: 150px 0;
         }
-        .hero-section h1 { font-size: 3.5rem; margin-bottom: 1.5rem; }
-        .hero-section p { font-size: 1.2rem; max-width: 700px; margin: 0 auto 2rem; }
 
         /* Estimator */
-        .estimator-section { background-color: var(--light-gray); padding: 80px 0; }
+        .estimator-section { background: var(--light-gray); padding: 80px 0; }
         .estimator-box {
-            background: var(--white);
+            background: #fff;
             border-radius: 12px;
             padding: 35px;
             box-shadow: 0 8px 25px rgba(0,0,0,0.06);
-        }
-        .form-label { font-weight: 600; color: var(--charcoal); }
-        .form-control, .form-select {
-            padding: 12px 15px;
-            border-radius: 8px;
-            border: 1px solid #ddd;
-            font-size: 1rem;
-        }
-        .result-box {
-            background-color: var(--primary-yellow);
-            color: var(--charcoal);
-            padding: 20px;
-            border-radius: 8px;
-            margin-top: 20px;
-            text-align: center;
-            font-weight: 700;
-            font-size: 1.3rem;
-            display: none;
-            animation: fadeIn 0.5s ease;
         }
 
         /* Packages */
         .packages-section { padding: 80px 0; }
         .package-card {
+            background: #fff;
             border-radius: 12px;
-            overflow: hidden;
             box-shadow: 0 6px 20px rgba(0,0,0,0.05);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            height: 100%;
+            overflow: hidden;
+            transition: all 0.3s ease;
         }
-        .package-card:hover {
-            transform: translateY(-12px);
-            box-shadow: 0 12px 30px rgba(0,0,0,0.12);
-        }
+        .package-card:hover { transform: translateY(-8px); }
+
         .package-header {
-            background-color: var(--charcoal);
-            color: var(--white);
+            background: var(--charcoal);
+            color: #fff;
             padding: 25px 20px;
             text-align: center;
         }
-        .package-header h3 { margin: 0; font-size: 1.5rem; }
         .package-body { padding: 30px; }
         .package-price {
-            font-size: 2.2rem;
-            font-weight: 700;
+            font-size: 2rem;
             color: var(--primary-yellow);
-            margin-bottom: 15px;
+            font-weight: 700;
+            margin-bottom: 10px;
         }
-        .package-features {
-            list-style: none;
-            padding: 0;
-            margin: 0 0 20px;
+        .accordion-button:not(.collapsed) {
+            background: var(--primary-yellow);
+            color: var(--charcoal);
         }
-        .package-features li {
-            padding: 10px 0;
-            border-bottom: 1px dashed #eee;
-            display: flex;
-            align-items: center;
-            font-size: 0.95rem;
-        }
-        .package-features li:last-child { border-bottom: none; }
-        .package-features i { color: var(--primary-yellow); margin-right: 10px; width: 18px; }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .hero-section { padding: 100px 0; }
-            .hero-section h1 { font-size: 2.5rem; }
-            .estimator-box { padding: 25px; }
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        .accordion-button {
+            font-weight: 600;
         }
     </style>
 </head>
 <body>
 
-    <!-- Hero Section -->
+    <!-- Hero -->
     <section class="hero-section">
         <div class="container">
             <h1>Build Your Dream Home with Confidence</h1>
-            <p>With over 15 years of experience, we transform your vision into reality with quality craftsmanship and transparent pricing.</p>
-            <div class="hero-buttons">
-                <a href="#packages" class="btn btn-primary me-3">View Packages</a>
-                <a href="#estimator" class="btn btn-outline-primary">Get Estimate</a>
-            </div>
+            <p>Modern designs. Transparent pricing. Trusted craftsmanship.</p>
+            <a href="#packages" class="btn btn-primary me-3">View Packages</a>
+            <a href="#estimator" class="btn btn-outline-primary">Get Estimate</a>
         </div>
     </section>
 
-    <!-- Quick Cost Estimator -->
+    <!-- Estimator -->
     <section id="estimator" class="estimator-section">
         <div class="container">
             <div class="row justify-content-center">
@@ -216,12 +168,12 @@ $testimonials = executeQuery("
                         <h3 class="text-center mb-4">Quick Cost Estimator</h3>
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label for="squareFootage" class="form-label">Square Footage</label>
-                                <input type="number" class="form-control" id="squareFootage" placeholder="e.g. 1500" min="100" required>
+                                <label class="form-label">Square Footage</label>
+                                <input type="number" id="squareFootage" class="form-control" placeholder="e.g. 1500" min="100">
                             </div>
                             <div class="col-md-6">
-                                <label for="packageType" class="form-label">Package Type</label>
-                                <select class="form-select" id="packageType" required>
+                                <label class="form-label">Package Type</label>
+                                <select id="packageType" class="form-select">
                                     <option value="">Select Package</option>
                                     <?php foreach ($packages as $pkg): ?>
                                         <option value="<?= (float)$pkg['price_per_sqft'] ?>" 
@@ -233,12 +185,11 @@ $testimonials = executeQuery("
                                 </select>
                             </div>
                         </div>
-                        <button class="btn btn-primary w-100 mt-3" onclick="calculateEstimate()">
-                            Calculate Estimate
-                        </button>
-                        <div class="result-box" id="estimateResult">
-                            Estimated Cost: <span id="estimateAmount">₹0</span>
-                            <small class="d-block mt-2" id="packageName"></small>
+                        <button class="btn btn-primary w-100 mt-3" onclick="calculateEstimate()">Calculate</button>
+                        <div class="text-center mt-4" id="estimateResult" style="display:none;">
+                            <h5>Estimated Cost:</h5>
+                            <h3 id="estimateAmount" class="fw-bold">₹0</h3>
+                            <small id="packageName" class="text-muted d-block"></small>
                         </div>
                     </div>
                 </div>
@@ -246,116 +197,86 @@ $testimonials = executeQuery("
         </div>
     </section>
 
-    <!-- Featured Packages -->
+    <!-- Packages -->
     <section id="packages" class="packages-section">
         <div class="container">
             <div class="text-center mb-5">
                 <h2>Our Construction Packages</h2>
-                <p class="lead">Choose the package that best fits your needs and budget</p>
+                <p class="lead">Comprehensive inclusions with full transparency</p>
             </div>
             <div class="row g-4">
-                <?php if (!empty($packages)): ?>
-                    <?php foreach ($packages as $pkg): ?>
-                        <div class="col-md-4">
-                            <div class="package-card">
-                                <div class="package-header">
-                                    <h3><?= sanitizeOutput($pkg['title']) ?></h3>
-                                </div>
-                                <div class="package-body">
-                                    <div class="package-price">
-                                        ₹<?= number_format((float)$pkg['price_per_sqft']) ?>/sq.ft
-                                    </div>
-                                    <p class="text-muted"><?= sanitizeOutput($pkg['description']) ?></p>
-                                    <ul class="package-features">
-                                        <?php 
-                                        $features = array_filter(array_map('trim', explode('|', $pkg['features'])));
-                                        $display = array_slice($features, 0, 5);
-                                        foreach ($display as $f): 
-                                            if (empty($f)) continue;
+                <?php foreach ($packages as $pkg): ?>
+                    <div class="col-md-6">
+                        <div class="package-card">
+                            <div class="package-header">
+                                <h3><?= sanitizeOutput($pkg['title']) ?></h3>
+                            </div>
+                            <div class="package-body">
+                                <div class="package-price">₹<?= number_format((float)$pkg['price_per_sqft']) ?>/sq.ft</div>
+                                <p><?= sanitizeOutput($pkg['description']) ?></p>
+
+                                <!-- Accordion -->
+                                <?php if (!empty($package_sections[$pkg['id']])): ?>
+                                    <div class="accordion" id="accordion<?= $pkg['id'] ?>">
+                                        <?php foreach ($package_sections[$pkg['id']] as $index => $sec): 
+                                            $collapseId = "collapse{$pkg['id']}_{$index}";
                                         ?>
-                                            <li><i class="fas fa-check"></i> <?= sanitizeOutput($f) ?></li>
+                                            <div class="accordion-item">
+                                                <h2 class="accordion-header" id="heading<?= $collapseId ?>">
+                                                    <button class="accordion-button <?= $index !== 0 ? 'collapsed' : '' ?>" 
+                                                            type="button" data-bs-toggle="collapse" 
+                                                            data-bs-target="#<?= $collapseId ?>" 
+                                                            aria-expanded="<?= $index === 0 ? 'true' : 'false' ?>" 
+                                                            aria-controls="<?= $collapseId ?>">
+                                                        <?= sanitizeOutput($sec['title']) ?>
+                                                    </button>
+                                                </h2>
+                                                <div id="<?= $collapseId ?>" 
+                                                     class="accordion-collapse collapse <?= $index === 0 ? 'show' : '' ?>" 
+                                                     aria-labelledby="heading<?= $collapseId ?>" 
+                                                     data-bs-parent="#accordion<?= $pkg['id'] ?>">
+                                                    <div class="accordion-body">
+                                                        <?= $sec['content'] ?>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         <?php endforeach; ?>
-                                        <?php if (count($features) > 5): ?>
-                                            <li class="text-muted">+<?= count($features) - 5 ?> more</li>
-                                        <?php endif; ?>
-                                    </ul>
-                                    <a href="select-plan.php?plan=<?= urlencode($pkg['title']) ?>" 
-                                       class="btn btn-primary w-100">Select Package</a>
-                                </div>
+                                    </div>
+                                <?php endif; ?>
+
+                                <a href="packages.php?id=<?= (int)$pkg['id'] ?>" class="btn btn-outline-primary w-100 mt-3">
+                                    View Full Details
+                                </a>
                             </div>
                         </div>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <div class="col-12 text-center">
-                        <p class="text-muted">No packages available at the moment. Please check back later.</p>
                     </div>
-                <?php endif; ?>
+                <?php endforeach; ?>
             </div>
-            <div class="text-center mt-4">
-                <a href="packages.php" class="btn btn-outline-primary">View All Packages</a>
-            </div>
-        </div>
-    </section>
 
-    <!-- Why Choose Us -->
-    <section class="why-choose-section py-5" style="background-color: var(--light-gray);">
-        <div class="container">
-            <div class="text-center mb-5">
-                <h2>Why Choose Grand Jyothi</h2>
-                <p class="lead">Excellence in every brick, trust in every promise</p>
-            </div>
-            <div class="row g-4">
-                <div class="col-md-3 col-sm-6">
-                    <div class="text-center p-4">
-                        <div class="feature-icon mb-3"><i class="fas fa-award fa-3x" style="color: var(--primary-yellow);"></i></div>
-                        <h4>15+ Years Experience</h4>
-                        <p>Delivering quality homes since 2005.</p>
-                    </div>
-                </div>
-                <div class="col-md-3 col-sm-6">
-                    <div class="text-center p-4">
-                        <div class="feature-icon mb-3"><i class="fas fa-rupee-sign fa-3x" style="color: var(--primary-yellow);"></i></div>
-                        <h4>Transparent Pricing</h4>
-                        <p>No hidden costs. Clear quotes.</p>
-                    </div>
-                </div>
-                <div class="col-md-3 col-sm-6">
-                    <div class="text-center p-4">
-                        <div class="feature-icon mb-3"><i class="fas fa-users fa-3x" style="color: var(--primary-yellow);"></i></div>
-                        <h4>Expert Team</h4>
-                        <p>Architects, engineers, craftsmen.</p>
-                    </div>
-                </div>
-                <div class="col-md-3 col-sm-6">
-                    <div class="text-center p-4">
-                        <div class="feature-icon mb-3"><i class="fas fa-calendar-check fa-3x" style="color: var(--primary-yellow);"></i></div>
-                        <h4>On-Time Delivery</h4>
-                        <p>We respect your timeline.</p>
-                    </div>
-                </div>
+            <div class="text-center mt-5">
+                <a href="packages.php" class="btn btn-primary">View All Packages</a>
             </div>
         </div>
     </section>
 
     <!-- Testimonials -->
-    <section class="testimonials-section py-5" style="background-color: var(--light-gray);">
+    <section class="py-5" style="background: var(--light-gray);">
         <div class="container">
             <div class="text-center mb-5">
                 <h2>What Our Clients Say</h2>
-                <p class="lead">Real stories from happy homeowners</p>
+                <p class="lead">Trusted by hundreds of happy homeowners</p>
             </div>
             <div class="row g-4">
                 <?php foreach ($testimonials as $t): ?>
                     <div class="col-md-4">
-                        <div class="testimonial-card p-4 bg-white rounded shadow-sm h-100">
-                            <p class="testimonial-text fst-italic">"<?= sanitizeOutput($t['text']) ?>"</p>
-                            <div class="d-flex align-items-center">
-                                <div class="client-avatar me-3">
-                                    <img src="https://randomuser.me/api/portraits/men/<?= rand(1,99) ?>.jpg" 
-                                         alt="<?= sanitizeOutput($t['client_name']) ?>" class="rounded-circle">
-                                </div>
+                        <div class="p-4 bg-white rounded shadow-sm h-100">
+                            <p class="fst-italic">"<?= sanitizeOutput($t['text']) ?>"</p>
+                            <div class="d-flex align-items-center mt-3">
+                                <img src="https://randomuser.me/api/portraits/men/<?= rand(1,99) ?>.jpg" 
+                                     alt="<?= sanitizeOutput($t['client_name']) ?>" 
+                                     class="rounded-circle me-3" width="50">
                                 <div>
-                                    <h5 class="client-name mb-0"><?= sanitizeOutput($t['client_name']) ?></h5>
+                                    <h6 class="mb-0"><?= sanitizeOutput($t['client_name']) ?></h6>
                                     <?php if ($t['project_title']): ?>
                                         <small class="text-muted"><?= sanitizeOutput($t['project_title']) ?></small>
                                     <?php endif; ?>
@@ -365,15 +286,11 @@ $testimonials = executeQuery("
                     </div>
                 <?php endforeach; ?>
             </div>
-            <div class="text-center mt-4">
-                <a href="testimonials.php" class="btn btn-outline-primary">Read More</a>
-            </div>
         </div>
     </section>
 
     <?php require_once __DIR__ . '/includes/footer.php'; ?>
 
-    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         function calculateEstimate() {
@@ -382,28 +299,16 @@ $testimonials = executeQuery("
             const rate = parseFloat(select.value);
             const pkgName = select.options[select.selectedIndex]?.dataset.name || '';
 
-            const resultBox = document.getElementById('estimateResult');
-            const amountSpan = document.getElementById('estimateAmount');
-            const nameSpan = document.getElementById('packageName');
-
             if (!sqft || sqft < 100 || !rate) {
                 alert('Please enter at least 100 sq.ft and select a package.');
                 return;
             }
 
             const estimate = sqft * rate;
-            amountSpan.textContent = '₹' + estimate.toLocaleString('en-IN');
-            nameSpan.textContent = pkgName ? `(${pkgName})` : '';
-            resultBox.style.display = 'block';
-            resultBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            document.getElementById('estimateAmount').textContent = '₹' + estimate.toLocaleString('en-IN');
+            document.getElementById('packageName').textContent = pkgName ? '(' + pkgName + ')' : '';
+            document.getElementById('estimateResult').style.display = 'block';
         }
-
-        // Reset on input
-        ['squareFootage', 'packageType'].forEach(id => {
-            document.getElementById(id).addEventListener('input', () => {
-                document.getElementById('estimateResult').style.display = 'none';
-            });
-        });
     </script>
 </body>
 </html>

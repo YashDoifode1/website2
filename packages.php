@@ -1,8 +1,9 @@
 <?php
 /**
- * Packages Page - Modern Design
+ * Packages Page - Modern Design (Updated with package_sections)
  * 
- * Dynamic construction packages with comparison toggle, popular badge, and responsive layout.
+ * Dynamic construction packages with section accordions, comparison table,
+ * and responsive layout.
  */
 
 declare(strict_types=1);
@@ -14,9 +15,20 @@ $page_title = 'Construction Packages | BuildDream Construction';
 // Fetch all active packages
 $sql = "SELECT * FROM packages WHERE is_active = 1 ORDER BY display_order ASC";
 $stmt = executeQuery($sql);
-$packages = $stmt->fetchAll();
+$packages = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Get all unique features for comparison
+// Fetch all active sections
+$sqlSections = "SELECT * FROM package_sections WHERE is_active = 1 ORDER BY package_id, display_order";
+$stmtSections = executeQuery($sqlSections);
+$sectionsRaw = $stmtSections->fetchAll(PDO::FETCH_ASSOC);
+
+// Group sections by package_id
+$packageSections = [];
+foreach ($sectionsRaw as $section) {
+    $packageSections[$section['package_id']][] = $section;
+}
+
+// Get all unique features for comparison (same as before)
 $allFeatures = [];
 foreach ($packages as $package) {
     $features = explode('|', $package['features']);
@@ -43,19 +55,19 @@ require_once __DIR__ . '/includes/header.php';
             --white: #FFFFFF;
             --light-gray: #f8f9fa;
         }
-       
+
         body {
             font-family: 'Open Sans', sans-serif;
             color: var(--charcoal);
             background-color: var(--light-gray);
             line-height: 1.6;
         }
-       
+
         h1, h2, h3, h4, h5, h6 {
             font-family: 'Montserrat', sans-serif;
             font-weight: 600;
         }
-       
+
         .btn-primary {
             background-color: var(--primary-yellow);
             border-color: var(--primary-yellow);
@@ -64,13 +76,13 @@ require_once __DIR__ . '/includes/header.php';
             padding: 10px 25px;
             border-radius: 8px;
         }
-       
+
         .btn-primary:hover {
             background-color: #e89a1f;
             border-color: #e89a1f;
             color: var(--charcoal);
         }
-       
+
         .btn-outline-primary {
             border-color: var(--primary-yellow);
             color: var(--primary-yellow);
@@ -78,35 +90,35 @@ require_once __DIR__ . '/includes/header.php';
             padding: 10px 25px;
             border-radius: 8px;
         }
-       
+
         .btn-outline-primary:hover {
             background-color: var(--primary-yellow);
             border-color: var(--primary-yellow);
             color: var(--charcoal);
         }
-       
+
         .navbar {
             background-color: var(--charcoal);
             padding: 15px 0;
         }
-       
+
         .navbar-brand {
             font-family: 'Montserrat', sans-serif;
             font-weight: 700;
             font-size: 1.8rem;
             color: var(--primary-yellow) !important;
         }
-       
+
         .nav-link {
             color: var(--white) !important;
             font-weight: 500;
             margin: 0 10px;
         }
-       
+
         .nav-link:hover, .nav-link.active {
             color: var(--primary-yellow) !important;
         }
-       
+
         .page-header {
             background: linear-gradient(rgba(26, 26, 26, 0.8), rgba(26, 26, 26, 0.8)),
                         url('https://images.unsplash.com/photo-1541888946425-d81bb19240f5?ixlib=rb-4.0.3&auto=format&fit=crop&w=1770&q=80') no-repeat center center;
@@ -115,12 +127,12 @@ require_once __DIR__ . '/includes/header.php';
             padding: 80px 0;
             text-align: center;
         }
-       
+
         .page-header h1 {
             font-size: 2.8rem;
             margin-bottom: 15px;
         }
-       
+
         .comparison-toggle {
             background-color: var(--white);
             border-radius: 50px;
@@ -130,16 +142,16 @@ require_once __DIR__ . '/includes/header.php';
             margin-top: 20px;
             box-shadow: 0 3px 10px rgba(0,0,0,0.1);
         }
-       
+
         .comparison-toggle span {
             margin-right: 10px;
             font-weight: 500;
         }
-       
+
         .package-section {
             padding: 80px 0;
         }
-       
+
         .package-card {
             background-color: var(--white);
             border-radius: 10px;
@@ -150,12 +162,12 @@ require_once __DIR__ . '/includes/header.php';
             margin-bottom: 30px;
             position: relative;
         }
-       
+
         .package-card:hover {
             transform: translateY(-10px);
             box-shadow: 0 15px 30px rgba(0,0,0,0.1);
         }
-       
+
         .package-header {
             background-color: var(--charcoal);
             color: var(--white);
@@ -163,7 +175,7 @@ require_once __DIR__ . '/includes/header.php';
             text-align: center;
             position: relative;
         }
-       
+
         .package-popular {
             position: absolute;
             top: -10px;
@@ -177,11 +189,11 @@ require_once __DIR__ . '/includes/header.php';
             font-weight: 600;
             z-index: 10;
         }
-       
+
         .package-body {
             padding: 30px;
         }
-       
+
         .package-price {
             font-size: 2.2rem;
             font-weight: 700;
@@ -189,56 +201,49 @@ require_once __DIR__ . '/includes/header.php';
             margin-bottom: 15px;
             text-align: center;
         }
-       
+
         .package-description {
             text-align: center;
             margin-bottom: 25px;
             color: #666;
             font-size: 0.95rem;
         }
-       
-        .package-features {
-            list-style-type: none;
-            padding-left: 0;
-            margin-bottom: 30px;
+
+        /* Accordion styling */
+        .accordion-button {
+            font-weight: 600;
+            background-color: #fff;
+            color: var(--charcoal);
         }
-       
-        .package-features li {
-            padding: 10px 0;
-            border-bottom: 1px solid #eee;
-            display: flex;
-            align-items: center;
+
+        .accordion-button:not(.collapsed) {
+            background-color: var(--primary-yellow);
+            color: var(--charcoal);
+        }
+
+        .accordion-body {
             font-size: 0.95rem;
+            color: #555;
+            line-height: 1.5;
         }
-       
-        .package-features li:last-child {
-            border-bottom: none;
-        }
-       
-        .package-features li i {
-            color: var(--primary-yellow);
-            margin-right: 10px;
-            width: 20px;
-            text-align: center;
-        }
-       
+
         .package-footer {
             padding: 0 30px 30px;
             text-align: center;
         }
-       
+
         .comparison-section {
             padding: 60px 0;
             background-color: var(--white);
             display: none;
         }
-       
+
         .comparison-table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
         }
-       
+
         .comparison-table th {
             background-color: var(--charcoal);
             color: var(--white);
@@ -246,17 +251,17 @@ require_once __DIR__ . '/includes/header.php';
             text-align: center;
             font-weight: 600;
         }
-       
+
         .comparison-table td {
             padding: 15px;
             border-bottom: 1px solid #eee;
             text-align: center;
         }
-       
+
         .comparison-table tr:nth-child(even) {
             background-color: #f9f9f9;
         }
-       
+
         .comparison-table .feature-name {
             text-align: left;
             font-weight: 500;
@@ -265,28 +270,28 @@ require_once __DIR__ . '/includes/header.php';
             left: 0;
             z-index: 1;
         }
-       
+
         .comparison-table .check-mark {
             color: var(--primary-yellow);
             font-size: 1.2rem;
         }
-       
+
         .comparison-table .cross-mark {
             color: #ccc;
             font-size: 1.2rem;
         }
-       
+
         .cta-section {
             background-color: var(--charcoal);
             color: var(--white);
             padding: 80px 0;
             text-align: center;
         }
-       
+
         .cta-section h2 {
             margin-bottom: 20px;
         }
-       
+
         .cta-section p {
             max-width: 700px;
             margin: 0 auto 30px;
@@ -312,9 +317,6 @@ require_once __DIR__ . '/includes/header.php';
     </style>
 </head>
 <body>
-
-    <!-- Navigation -->
-    
 
     <!-- Page Header -->
     <section class="page-header">
@@ -358,16 +360,34 @@ require_once __DIR__ . '/includes/header.php';
                                         <?php endif; ?>
                                     </div>
                                     <p class="package-description"><?= sanitizeOutput($package['description']) ?></p>
-                                    <ul class="package-features">
-                                        <?php 
-                                        $features = explode('|', $package['features']);
-                                        foreach ($features as $feature): 
-                                            $feature = trim($feature);
-                                            if (empty($feature)) continue;
-                                        ?>
-                                            <li><i class="fas fa-check"></i> <?= sanitizeOutput($feature) ?></li>
-                                        <?php endforeach; ?>
-                                    </ul>
+
+                                    <?php if (!empty($packageSections[$package['id']])): ?>
+                                        <div class="accordion" id="accordion<?= $package['id'] ?>">
+                                            <?php foreach ($packageSections[$package['id']] as $index => $section): 
+                                                $collapseId = 'collapse' . $package['id'] . '_' . $index;
+                                                $headingId  = 'heading' . $package['id'] . '_' . $index;
+                                            ?>
+                                                <div class="accordion-item mb-2">
+                                                    <h2 class="accordion-header" id="<?= $headingId ?>">
+                                                        <button class="accordion-button <?= $index > 0 ? 'collapsed' : '' ?>" type="button"
+                                                                data-bs-toggle="collapse" data-bs-target="#<?= $collapseId ?>"
+                                                                aria-expanded="<?= $index === 0 ? 'true' : 'false' ?>"
+                                                                aria-controls="<?= $collapseId ?>">
+                                                            <?= sanitizeOutput($section['title']) ?>
+                                                        </button>
+                                                    </h2>
+                                                    <div id="<?= $collapseId ?>" class="accordion-collapse collapse <?= $index === 0 ? 'show' : '' ?>"
+                                                         aria-labelledby="<?= $headingId ?>" data-bs-parent="#accordion<?= $package['id'] ?>">
+                                                        <div class="accordion-body">
+                                                            <?= $section['content'] ?>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php else: ?>
+                                        <p class="text-muted text-center">No details available for this package.</p>
+                                    <?php endif; ?>
                                 </div>
                                 <div class="package-footer">
                                     <a href="/constructioninnagpur/select-plan.php?plan=<?= urlencode($package['title']) ?>" 

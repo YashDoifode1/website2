@@ -11,8 +11,8 @@ require_once __DIR__ . '/includes/security.php';
 
 $page_title = 'Our Services | Grand Jyothi Construction';
 
-// Fetch all services
-$sql = "SELECT title, description, icon FROM services ORDER BY created_at DESC";
+// Fetch all services with blog fields
+$sql = "SELECT title, description, icon, slug, cover_image, created_at FROM services ORDER BY created_at DESC";
 $stmt = executeQuery($sql);
 $services = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -43,15 +43,22 @@ require_once __DIR__ . '/includes/header.php';
             <?php else: ?>
                 <div class="services-grid">
                     <?php foreach ($services as $service): 
-                        $icon = sanitizeOutput($service['icon']) ?: 'tool';
+                        $icon  = sanitizeOutput($service['icon']) ?: 'tool';
+                        $title = sanitizeOutput($service['title']);
+                        $desc  = sanitizeOutput(substr($service['description'], 0, 120)) . '...';
+                        $slug  = sanitizeOutput($service['slug']) ?: strtolower(str_replace(' ', '-', $title));
+                        $cover = sanitizeOutput($service['cover_image'] ?? '');
                     ?>
-                        <div class="service-card">
+                        <a href="service-info.php?slug=<?= urlencode($slug) ?>" class="service-card text-decoration-none">
+                            <?php if (!empty($cover)): ?>
+                                <div class="service-cover" style="background-image: url('<?= $cover ?>');"></div>
+                            <?php endif; ?>
                             <div class="service-icon">
                                 <i class="fas fa-<?= $icon ?> fa-2x"></i>
                             </div>
-                            <h3 class="service-title"><?= sanitizeOutput($service['title']) ?></h3>
-                            <p class="service-desc"><?= sanitizeOutput($service['description']) ?></p>
-                        </div>
+                            <h3 class="service-title"><?= $title ?></h3>
+                            <p class="service-desc"><?= $desc ?></p>
+                        </a>
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>
@@ -115,105 +122,33 @@ require_once __DIR__ . '/includes/header.php';
             <h2 class="section-title">Our Service Areas</h2>
             <p class="text-center mb-5 lead text-muted">Serving clients across Nagpur and surrounding regions</p>
             <div class="areas-grid">
-                <div class="area-card">
-                    <div class="area-icon">
-                        <i class="fas fa-map-marker-alt"></i>
+                <?php
+                $areas = [
+                    ['Nagpur City', 'Core city and surrounding areas'],
+                    ['Dharampeth', 'Premium residential & commercial zone'],
+                    ['Sadar', 'Central business district'],
+                    ['Ramdaspeth', 'High-end residential area'],
+                    ['Civil Lines', 'Heritage and government zone'],
+                    ['Sitabuldi', 'Commercial & market hub'],
+                    ['Wardha Road', 'Industrial & logistics corridor'],
+                    ['Kamptee', 'Suburban residential growth'],
+                    ['Hingna', 'Industrial & manufacturing zone'],
+                    ['Koradi', 'Emerging residential area'],
+                    ['Manish Nagar', 'Modern residential locality'],
+                    ['And Surrounding Areas', 'We serve all nearby regions']
+                ];
+                foreach ($areas as $area): ?>
+                    <div class="area-card">
+                        <div class="area-icon">
+                            <i class="fas fa-map-marker-alt"></i>
+                        </div>
+                        <h4><?= $area[0] ?></h4>
+                        <p><?= $area[1] ?></p>
                     </div>
-                    <h4>Nagpur City</h4>
-                    <p>Core city and surrounding areas</p>
-                </div>
-                <div class="area-card">
-                    <div class="area-icon">
-                        <i class="fas fa-map-marker-alt"></i>
-                    </div>
-                    <h4>Dharampeth</h4>
-                    <p>Premium residential & commercial zone</p>
-                </div>
-                <div class="area-card">
-                    <div class="area-icon">
-                        <i class="fas fa-map-marker-alt"></i>
-                    </div>
-                    <h4>Sadar</h4>
-                    <p>Central business district</p>
-                </div>
-                <div class="area-card">
-                    <div class="area-icon">
-                        <i class="fas fa-map-marker-alt"></i>
-                    </div>
-                    <h4>Ramdaspeth</h4>
-                    <p>High-end residential area</p>
-                </div>
-                <div class="area-card">
-                    <div class="area-icon">
-                        <i class="fas fa-map-marker-alt"></i>
-                    </div>
-                    <h4>Civil Lines</h4>
-                    <p>Heritage and government zone</p>
-                </div>
-                <div class="area-card">
-                    <div class="area-icon">
-                        <i class="fas fa-map-marker-alt"></i>
-                    </div>
-                    <h4>Sitabuldi</h4>
-                    <p>Commercial & market hub</p>
-                </div>
-                <div class="area-card">
-                    <div class="area-icon">
-                        <i class="fas fa-map-marker-alt"></i>
-                    </div>
-                    <h4>Wardha Road</h4>
-                    <p>Industrial & logistics corridor</p>
-                </div>
-                <div class="area-card">
-                    <div class="area-icon">
-                        <i class="fas fa-map-marker-alt"></i>
-                    </div>
-                    <h4>Kamptee</h4>
-                    <p>Suburban residential growth</p>
-                </div>
-                <div class="area-card">
-                    <div class="area-icon">
-                        <i class="fas fa-map-marker-alt"></i>
-                    </div>
-                    <h4>Hingna</h4>
-                    <p>Industrial & manufacturing zone</p>
-                </div>
-                <div class="area-card">
-                    <div class="area-icon">
-                        <i class="fas fa-map-marker-alt"></i>
-                    </div>
-                    <h4>Koradi</h4>
-                    <p>Emerging residential area</p>
-                </div>
-                <div class="area-card">
-                    <div class="area-icon">
-                        <i class="fas fa-map-marker-alt"></i>
-                    </div>
-                    <h4>Manish Nagar</h4>
-                    <p>Modern residential locality</p>
-                </div>
-                <div class="area-card">
-                    <div class="area-icon">
-                        <i class="fas fa-map-marker-alt"></i>
-                    </div>
-                    <h4>And Surrounding Areas</h4>
-                    <p>We serve all nearby regions</p>
-                </div>
+                <?php endforeach; ?>
             </div>
         </div>
     </section>
-
-    <!-- CTA Section -->
-    <!-- <section class="cta-section">
-        <div class="container">
-            <h2>Ready to Build Your Vision?</h2>
-            <p>Contact us today for a free consultation and personalized quote</p>
-            <div class="d-flex justify-content-center gap-3 flex-wrap">
-                <a href="/constructioninnagpur/contact.php" class="btn btn-primary">Request a Quote</a>
-                <a href="/constructioninnagpur/projects.php" class="btn btn-outline-light">View Our Projects</a>
-            </div>
-        </div>
-    </section> -->
 </main>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
@@ -252,16 +187,6 @@ require_once __DIR__ . '/includes/header.php';
     .btn-primary:hover {
         background-color: #e89a1f;
         border-color: #e89a1f;
-        color: var(--charcoal);
-    }
-
-    .btn-outline-light {
-        border-color: var(--white);
-        color: var(--white);
-    }
-
-    .btn-outline-light:hover {
-        background-color: var(--white);
         color: var(--charcoal);
     }
 
@@ -321,6 +246,21 @@ require_once __DIR__ . '/includes/header.php';
         box-shadow: 0 10px 30px rgba(0,0,0,0.08);
         text-align: center;
         transition: transform 0.3s ease, box-shadow 0.3s ease;
+        color: inherit;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .service-cover {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 120px;
+        background-size: cover;
+        background-position: center;
+        border-radius: 10px 10px 0 0;
+        opacity: 0.3;
     }
 
     .service-card:hover {
@@ -330,7 +270,9 @@ require_once __DIR__ . '/includes/header.php';
 
     .service-icon {
         color: var(--primary-yellow);
+        margin-top: 120px;
         margin-bottom: 20px;
+        position: relative;
     }
 
     .service-title {
@@ -344,37 +286,19 @@ require_once __DIR__ . '/includes/header.php';
         font-size: 0.95rem;
     }
 
-    /* Process Cards */
-    .process-card {
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-
-    .process-card:hover {
-        transform: translateY(-8px);
-        box-shadow: 0 15px 30px rgba(0,0,0,0.12);
-    }
-
+    /* Process and Areas (same as before) */
+    .process-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+    .process-card:hover { transform: translateY(-8px); box-shadow: 0 15px 30px rgba(0,0,0,0.12); }
     .process-number {
-        width: 50px;
-        height: 50px;
-        background-color: var(--primary-yellow);
-        color: var(--charcoal);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.5rem;
-        font-weight: 700;
-        margin: 0 auto 15px;
+        width: 50px; height: 50px; background-color: var(--primary-yellow);
+        color: var(--charcoal); border-radius: 50%; display: flex; align-items: center;
+        justify-content: center; font-size: 1.5rem; font-weight: 700; margin: 0 auto 15px;
     }
-
-    /* Service Areas */
     .areas-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
         gap: 25px;
     }
-
     .area-card {
         background-color: var(--light-gray);
         border-radius: 10px;
@@ -382,71 +306,22 @@ require_once __DIR__ . '/includes/header.php';
         text-align: center;
         transition: all 0.3s ease;
     }
-
     .area-card:hover {
         background-color: var(--primary-yellow);
         color: var(--charcoal);
         transform: translateY(-5px);
     }
-
-    .area-card:hover .area-icon {
-        color: var(--charcoal);
-    }
-
     .area-icon {
         color: var(--primary-yellow);
         font-size: 1.8rem;
         margin-bottom: 15px;
         transition: color 0.3s ease;
     }
-
-    .area-card h4 {
-        margin-bottom: 10px;
-        font-size: 1.1rem;
-    }
-
-    .area-card p {
-        font-size: 0.9rem;
-        margin: 0;
-        color: #666;
-    }
-
-    .area-card:hover p {
-        color: #444;
-    }
-
-    /* CTA */
-    .cta-section {
-        background-color: var(--charcoal);
-        color: var(--white);
-        padding: 80px 0;
-        text-align: center;
-    }
-
-    .cta-section h2 {
-        margin-bottom: 20px;
-    }
-
-    .cta-section p {
-        max-width: 700px;
-        margin: 0 auto 30px;
-        font-size: 1.1rem;
-    }
-
+    .area-card:hover .area-icon { color: var(--charcoal); }
     @media (max-width: 768px) {
-        .hero-section {
-            padding: 80px 0;
-        }
-        .hero-section h1 {
-            font-size: 2.5rem;
-        }
-        .section-padding {
-            padding: 60px 0;
-        }
-        .process-number {
-            width: 40px;
-            height: 40px;
-            font-size: 1.2rem;
-        }
+        .hero-section { padding: 80px 0; }
+        .hero-section h1 { font-size: 2.5rem; }
+        .section-padding { padding: 60px 0; }
+        .process-number { width: 40px; height: 40px; font-size: 1.2rem; }
     }
 </style>

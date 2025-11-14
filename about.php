@@ -35,12 +35,12 @@ require_once __DIR__ . '/includes/header.php';
                         <p>What sets us apart is our personalized approach. From initial consultation to final handover, we collaborate closely with clients to ensure every detail reflects their unique vision while meeting our exacting standards of excellence.</p>
                     </div>
                 </div>
-                <div class="col-lg-6">
+                <!-- <div class="col-lg-6">
                     <img src="/constructioninnagpur/assets/images/placeholder.jpeg" 
                          alt="Grand Jyothi Construction Team" 
                          class="img-fluid rounded"
                          onerror="this.src='https://via.placeholder.com/600x400?text=Team+Photo'">
-                </div>
+                </div> -->
             </div>
 
             <!-- Stats -->
@@ -160,12 +160,12 @@ require_once __DIR__ . '/includes/header.php';
         <div class="container">
             <h2 class="section-title">Why Partner With Grand Jyothi Construction?</h2>
             <div class="row g-5 align-items-center">
-                <div class="col-lg-6">
+                <!-- <div class="col-lg-6">
                     <img src="/constructioninnagpur/assets/images/placeholder.jpeg" 
                          alt="Quality Construction" 
                          class="img-fluid rounded"
                          onerror="this.src='https://via.placeholder.com/600x400?text=Quality+Work'">
-                </div>
+                </div> -->
                 <div class="col-lg-6">
                     <div class="why-choose-points">
                         <div class="point-item d-flex mb-4">
