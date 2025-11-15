@@ -1,7 +1,7 @@
 <?php
 /**
- * Admin Projects Management (Updated)
- * Supports status, type, size, duration, and project gallery
+ * Admin Projects Management
+ * CRUD operations for projects (NO main image in DB)
  */
 
 declare(strict_types=1);
@@ -19,12 +19,42 @@ $error_message = '';
 $action = $_GET['action'] ?? 'list';
 $project_id = $_GET['id'] ?? null;
 
+// ---------------------------------------------------------------------
+// Helper: Get first gallery image as thumbnail
+// ---------------------------------------------------------------------
+function getProjectThumbnail(int $pid, string $basePath): string
+{
+    $stmt = executeQuery(
+        "SELECT image_path FROM project_images WHERE project_id = ? ORDER BY `order` ASC, id ASC LIMIT 1",
+        [$pid]
+    );
+    $row = $stmt->fetch();
+
+    if ($row && !empty($row['image_path'])) {
+        return $basePath . '/assets/images/' . $row['image_path'];
+    }
+
+    return 'https://via.placeholder.com/600x400/1A1A1A/F9A826?text=No+Image';
+}
+
+// ---------------------------------------------------------------------
 // Handle Delete
+// ---------------------------------------------------------------------
 if ($action === 'delete' && $project_id) {
     try {
-        executeQuery("DELETE FROM projects WHERE id = ?", [$project_id]);
+        // Delete all gallery images + files
+        $gallery = executeQuery("SELECT image_path FROM project_images WHERE project_id = ?", [$project_id])->fetchAll();
+        foreach ($gallery as $g) {
+            if (!empty($g['image_path'])) {
+                deleteUploadedFile($g['image_path']);
+            }
+        }
         executeQuery("DELETE FROM project_images WHERE project_id = ?", [$project_id]);
-        $success_message = 'Project deleted successfully!';
+
+        // Delete project
+        executeQuery("DELETE FROM projects WHERE id = ?", [$project_id]);
+
+        $success_message = 'Project and all images deleted successfully!';
         $action = 'list';
     } catch (PDOException $e) {
         error_log('Delete Project Error: ' . $e->getMessage());
@@ -32,15 +62,17 @@ if ($action === 'delete' && $project_id) {
     }
 }
 
-// Handle Add/Edit Form Submission
+// ---------------------------------------------------------------------
+// Handle Add/Edit Form Submission (NO IMAGE UPLOAD)
+// ---------------------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $title = trim($_POST['title'] ?? '');
-    $location = trim($_POST['location'] ?? '');
-    $description = trim($_POST['description'] ?? '');
-    $type = $_POST['type'] ?? 'residential';
-    $status = $_POST['status'] ?? 'current';
-    $size = trim($_POST['size'] ?? '');
-    $duration = trim($_POST['duration'] ?? '');
+    $title        = trim($_POST['title'] ?? '');
+    $location     = trim($_POST['location'] ?? '');
+    $description  = trim($_POST['description'] ?? '');
+    $type         = $_POST['type'] ?? 'residential';
+    $status       = $_POST['status'] ?? 'current';
+    $size         = trim($_POST['size'] ?? '');
+    $duration     = trim($_POST['duration'] ?? '');
     $completed_on = trim($_POST['completed_on'] ?? '');
 
     if (empty($title) || empty($location) || empty($description)) {
@@ -48,16 +80,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         try {
             if ($action === 'edit' && $project_id) {
-                $sql = "UPDATE projects 
-                        SET title = ?, location = ?, description = ?, type = ?, status = ?, 
-                            size = ?, duration = ?, completed_on = ? 
+                $sql = "UPDATE projects SET 
+                            title = ?, location = ?, description = ?, 
+                            type = ?, status = ?, size = ?, duration = ?, 
+                            completed_on = ? 
                         WHERE id = ?";
-                executeQuery($sql, [$title, $location, $description, $type, $status, $size ?: null, $duration ?: null, $completed_on ?: null, $project_id]);
+                executeQuery($sql, [
+                    $title, $location, $description,
+                    $type, $status, $size, $duration,
+                    $completed_on ?: null, $project_id
+                ]);
                 $success_message = 'Project updated successfully!';
             } else {
-                $sql = "INSERT INTO projects (title, location, description, type, status, size, duration, completed_on) 
+                $sql = "INSERT INTO projects 
+                            (title, location, description, type, status, size, duration, completed_on) 
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-                executeQuery($sql, [$title, $location, $description, $type, $status, $size ?: null, $duration ?: null, $completed_on ?: null]);
+                executeQuery($sql, [
+                    $title, $location, $description,
+                    $type, $status, $size, $duration,
+                    $completed_on ?: null
+                ]);
                 $success_message = 'Project added successfully!';
             }
             $action = 'list';
@@ -68,7 +110,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// ---------------------------------------------------------------------
 // Fetch project for editing
+// ---------------------------------------------------------------------
 $project = null;
 if ($action === 'edit' && $project_id) {
     $stmt = executeQuery("SELECT * FROM projects WHERE id = ?", [$project_id]);
@@ -79,10 +123,24 @@ if ($action === 'edit' && $project_id) {
     }
 }
 
+// ---------------------------------------------------------------------
 // Fetch all projects for listing
+// ---------------------------------------------------------------------
 $projects = [];
 if ($action === 'list') {
-    $projects = executeQuery("SELECT * FROM projects ORDER BY created_at DESC")->fetchAll();
+    $stmt = executeQuery("
+        SELECT * FROM projects 
+        ORDER BY 
+            CASE status WHEN 'current' THEN 1 WHEN 'future' THEN 2 ELSE 3 END,
+            completed_on DESC, created_at DESC
+    ");
+    $raw = $stmt->fetchAll();
+    $basePath = '/constructioninnagpur';
+
+    foreach ($raw as $p) {
+        $p['thumbnail'] = getProjectThumbnail((int)$p['id'], $basePath);
+        $projects[] = $p;
+    }
 }
 
 require_once __DIR__ . '/includes/admin_header.php';
@@ -90,39 +148,45 @@ require_once __DIR__ . '/includes/admin_header.php';
 
 <div class="content-header">
     <h1>Manage Projects</h1>
-    <p>Create and manage all construction projects</p>
+    <p>Create and manage construction projects</p>
 </div>
 
 <?php if ($success_message): ?>
-    <div class="alert alert-success"><?= sanitizeOutput($success_message) ?></div>
+    <div class="alert alert-success">
+        <i data-feather="check-circle"></i>
+        <?= sanitizeOutput($success_message) ?>
+    </div>
 <?php endif; ?>
 
 <?php if ($error_message): ?>
-    <div class="alert alert-error"><?= sanitizeOutput($error_message) ?></div>
+    <div class="alert alert-error">
+        <i data-feather="alert-circle"></i>
+        <?= sanitizeOutput($error_message) ?>
+    </div>
 <?php endif; ?>
 
-
 <?php if ($action === 'list'): ?>
-    <!-- Project List View -->
+    <!-- List View -->
     <div class="card">
         <div class="card-header">
             <h2 class="card-title">All Projects</h2>
-            <a href="?action=add" class="btn btn-primary"><i data-feather="plus"></i> Add New Project</a>
+            <a href="?action=add" class="btn btn-primary">
+                <i data-feather="plus"></i> Add New Project
+            </a>
         </div>
 
         <?php if (empty($projects)): ?>
-            <p>No projects found. <a href="?action=add">Add one now</a>.</p>
+            <p>No projects found. <a href="?action=add">Add your first project</a>!</p>
         <?php else: ?>
             <div class="table-container">
                 <table class="admin-table">
                     <thead>
                         <tr>
+                            <th>Thumbnail</th>
                             <th>Title</th>
+                            <th>Location</th>
                             <th>Type</th>
                             <th>Status</th>
-                            <th>Location</th>
-                            <th>Size</th>
-                            <th>Duration</th>
                             <th>Completed</th>
                             <th>Actions</th>
                         </tr>
@@ -130,19 +194,26 @@ require_once __DIR__ . '/includes/admin_header.php';
                     <tbody>
                         <?php foreach ($projects as $proj): ?>
                             <tr>
+                                <td>
+                                    <img src="<?= $proj['thumbnail'] ?>"
+                                         alt="thumb"
+                                         style="width:60px;height:60px;object-fit:cover;border-radius:4px;"
+                                         onerror="this.src='https://via.placeholder.com/60/1A1A1A/F9A826?text=NA'">
+                                </td>
                                 <td><strong><?= sanitizeOutput($proj['title']) ?></strong></td>
-                                <td><?= ucfirst($proj['type']) ?></td>
-                                <td><span class="badge <?= $proj['status'] === 'completed' ? 'bg-success' : ($proj['status'] === 'future' ? 'bg-info' : 'bg-warning') ?>">
-                                    <?= ucfirst($proj['status']) ?>
-                                </span></td>
                                 <td><?= sanitizeOutput($proj['location']) ?></td>
-                                <td><?= sanitizeOutput($proj['size'] ?? '-') ?></td>
-                                <td><?= sanitizeOutput($proj['duration'] ?? '-') ?></td>
-                                <td><?= $proj['completed_on'] ? date('M Y', strtotime($proj['completed_on'])) : 'Ongoing' ?></td>
+                                <td><?= ucfirst(sanitizeOutput($proj['type'])) ?></td>
+                                <td>
+                                    <span class="badge <?= $proj['status'] === 'current' ? 'bg-success' : ($proj['status'] === 'future' ? 'bg-warning text-dark' : 'bg-primary') ?>">
+                                        <?= ucfirst($proj['status']) ?>
+                                    </span>
+                                </td>
+                                <td><?= $proj['completed_on'] ? date('M Y', strtotime($proj['completed_on'])) : '—' ?></td>
                                 <td class="table-actions">
                                     <a href="?action=edit&id=<?= $proj['id'] ?>" class="btn-edit">Edit</a>
-                                    <a href="project_gallery.php?project_id=<?= $proj['id'] ?>" class="btn btn-secondary btn-sm">Gallery</a>
-                                    <a href="?action=delete&id=<?= $proj['id'] ?>" class="btn-delete" onclick="return confirm('Delete this project?')">Delete</a>
+                                    <a href="?action=delete&id=<?= $proj['id'] ?>" class="btn-delete"
+                                       onclick="return confirm('Delete project and ALL images?');">Delete</a>
+                                    <a href="project_gallery.php?project_id=<?= $proj['id'] ?>" class="btn btn-info btn-sm">Gallery</a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -153,78 +224,86 @@ require_once __DIR__ . '/includes/admin_header.php';
     </div>
 
 <?php elseif ($action === 'add' || $action === 'edit'): ?>
-    <!-- Add/Edit Form -->
+    <!-- Add/Edit Form (NO IMAGE UPLOAD) -->
     <div class="card">
         <div class="card-header">
             <h2 class="card-title"><?= $action === 'edit' ? 'Edit Project' : 'Add New Project' ?></h2>
-            <a href="?action=list" class="btn btn-secondary"><i data-feather="arrow-left"></i> Back to List</a>
+            <a href="?action=list" class="btn btn-secondary">
+                <i data-feather="arrow-left"></i> Back to List
+            </a>
         </div>
 
         <form method="POST" action="">
             <div class="form-grid">
                 <div class="form-group">
-                    <label class="form-label">Title *</label>
-                    <input type="text" name="title" class="form-input" value="<?= $project['title'] ?? '' ?>" required>
+                    <label for="title" class="form-label">Project Title *</label>
+                    <input type="text" id="title" name="title" class="form-input"
+                           value="<?= $project ? sanitizeOutput($project['title']) : '' ?>"
+                           placeholder="e.g., Mr. Kushal Harish Residence" required>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Location *</label>
-                    <input type="text" name="location" class="form-input" value="<?= $project['location'] ?? '' ?>" required>
+                    <label for="location" class="form-label">Location *</label>
+                    <input type="text" id="location" name="location" class="form-input"
+                           value="<?= $project ? sanitizeOutput($project['location']) : '' ?>"
+                           placeholder="e.g., Nelamangala, Bangalore" required>
                 </div>
             </div>
 
             <div class="form-group">
-                <label class="form-label">Description *</label>
-                <textarea name="description" class="form-textarea" rows="5" required><?= $project['description'] ?? '' ?></textarea>
+                <label for="description" class="form-label">Description *</label>
+                <textarea id="description" name="description" class="form-textarea" rows="5" required
+                          placeholder="Enter project details, size, duration, highlights..."><?= $project ? sanitizeOutput($project['description']) : '' ?></textarea>
             </div>
 
             <div class="form-grid">
                 <div class="form-group">
-                    <label class="form-label">Project Type</label>
-                    <select name="type" class="form-select">
-                        <?php
-                        $types = ['residential', 'commercial', 'renovation', 'industrial', 'infrastructure'];
-                        foreach ($types as $t) {
-                            $selected = isset($project['type']) && $project['type'] === $t ? 'selected' : '';
-                            echo "<option value='$t' $selected>" . ucfirst($t) . "</option>";
-                        }
-                        ?>
+                    <label for="type" class="form-label">Project Type</label>
+                    <select id="type" name="type" class="form-input">
+                        <option value="residential" <?= ($project && $project['type'] === 'residential') ? 'selected' : '' ?>>Residential</option>
+                        <option value="commercial" <?= ($project && $project['type'] === 'commercial') ? 'selected' : '' ?>>Commercial</option>
+                        <option value="renovation" <?= ($project && $project['type'] === 'renovation') ? 'selected' : '' ?>>Renovation</option>
+                        <option value="institutional" <?= ($project && $project['type'] === 'institutional') ? 'selected' : '' ?>>Institutional</option>
                     </select>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Project Status</label>
-                    <select name="status" class="form-select">
-                        <?php
-                        $statuses = ['current', 'future', 'completed'];
-                        foreach ($statuses as $s) {
-                            $selected = isset($project['status']) && $project['status'] === $s ? 'selected' : '';
-                            echo "<option value='$s' $selected>" . ucfirst($s) . "</option>";
-                        }
-                        ?>
+                    <label for="status" class="form-label">Status</label>
+                    <select id="status" name="status" class="form-input">
+                        <option value="current" <?= ($project && $project['status'] === 'current') ? 'selected' : '' ?>>Current</option>
+                        <option value="future" <?= ($project && $project['status'] === 'future') ? 'selected' : '' ?>>Future</option>
+                        <option value="completed" <?= ($project && $project['status'] === 'completed') ? 'selected' : '' ?>>Completed</option>
                     </select>
                 </div>
             </div>
 
             <div class="form-grid">
                 <div class="form-group">
-                    <label class="form-label">Project Size</label>
-                    <input type="text" name="size" class="form-input" value="<?= $project['size'] ?? '' ?>" placeholder="e.g., 40x60 site">
+                    <label for="size" class="form-label">Size (e.g., 2500 sq.ft)</label>
+                    <input type="text" id="size" name="size" class="form-input"
+                           value="<?= $project ? sanitizeOutput($project['size']) : '' ?>"
+                           placeholder="2500 sq.ft">
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Project Duration</label>
-                    <input type="text" name="duration" class="form-input" value="<?= $project['duration'] ?? '' ?>" placeholder="e.g., 8 months">
+                    <label for="duration" class="form-label">Duration (e.g., 18 months)</label>
+                    <input type="text" id="duration" name="duration" class="form-input"
+                           value="<?= $project ? sanitizeOutput($project['duration']) : '' ?>"
+                           placeholder="18 months">
                 </div>
             </div>
 
             <div class="form-group">
-                <label class="form-label">Completion Date</label>
-                <input type="date" name="completed_on" class="form-input" value="<?= $project['completed_on'] ?? '' ?>">
+                <label for="completed_on" class="form-label">Completion Date</label>
+                <input type="date" id="completed_on" name="completed_on" class="form-input"
+                       value="<?= $project && $project['completed_on'] ? $project['completed_on'] : '' ?>">
             </div>
 
-            <div class="btn-group mt-3">
-                <button type="submit" class="btn btn-primary"><i data-feather="save"></i> <?= $action === 'edit' ? 'Update Project' : 'Add Project' ?></button>
+            <div class="btn-group" style="margin-top: 2rem;">
+                <button type="submit" class="btn btn-primary">
+                    <i data-feather="save"></i>
+                    <?= $action === 'edit' ? 'Update Project' : 'Add Project' ?>
+                </button>
                 <a href="?action=list" class="btn btn-secondary">Cancel</a>
             </div>
         </form>

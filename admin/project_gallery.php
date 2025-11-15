@@ -29,24 +29,28 @@ if (!$project) {
     die("Invalid project ID.");
 }
 
+// ---------------------------------------------------------------------
 // Handle image delete
+// ---------------------------------------------------------------------
 if (isset($_GET['delete_image'])) {
     $image_id = $_GET['delete_image'];
     try {
         $stmt = executeQuery("SELECT image_path FROM project_images WHERE id = ?", [$image_id]);
         $img = $stmt->fetch();
-        if ($img) {
+        if ($img && !empty($img['image_path'])) {
             deleteUploadedFile($img['image_path']);
-            executeQuery("DELETE FROM project_images WHERE id = ?", [$image_id]);
-            $success_message = 'Image deleted successfully.';
         }
+        executeQuery("DELETE FROM project_images WHERE id = ?", [$image_id]);
+        $success_message = 'Image deleted successfully.';
     } catch (PDOException $e) {
         error_log('Delete Image Error: ' . $e->getMessage());
         $error_message = 'Error deleting image.';
     }
 }
 
+// ---------------------------------------------------------------------
 // Handle image upload
+// ---------------------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['image'])) {
     $caption = trim($_POST['caption'] ?? '');
     $uploadResult = uploadImage($_FILES['image']);
@@ -67,8 +71,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['image'])) {
     }
 }
 
+// ---------------------------------------------------------------------
 // Fetch all gallery images
-$images = executeQuery("SELECT * FROM project_images WHERE project_id = ? ORDER BY created_at DESC", [$project_id])->fetchAll();
+// ---------------------------------------------------------------------
+$images = executeQuery(
+    "SELECT * FROM project_images WHERE project_id = ? ORDER BY created_at DESC",
+    [$project_id]
+)->fetchAll();
 
 require_once __DIR__ . '/includes/admin_header.php';
 ?>
@@ -123,14 +132,14 @@ require_once __DIR__ . '/includes/admin_header.php';
         <div class="gallery-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem;">
             <?php foreach ($images as $img): ?>
                 <div class="gallery-item" style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.5rem; background: #fff;">
-                    <img src="/constructioninnagpur/assets/images/<?= sanitizeOutput($img['image_path']) ?>" 
-                         alt="<?= sanitizeOutput($img['caption'] ?? 'Project image') ?>" 
+                    <img src="/constructioninnagpur/assets/images/<?= sanitizeOutput($img['image_path']) ?>"
+                         alt="<?= sanitizeOutput($img['caption'] ?? 'Project image') ?>"
                          style="width: 100%; border-radius: 6px; object-fit: cover; aspect-ratio: 1/1;">
                     <p style="font-size: 0.875rem; color: #475569; margin: 0.5rem 0;">
                         <?= sanitizeOutput($img['caption'] ?? 'No caption') ?>
                     </p>
-                    <a href="?project_id=<?= $project_id ?>&delete_image=<?= $img['id'] ?>" 
-                       class="btn btn-danger btn-sm w-full" 
+                    <a href="?project_id=<?= $project_id ?>&delete_image=<?= $img['id'] ?>"
+                       class="btn btn-danger btn-sm w-full"
                        onclick="return confirm('Delete this image?');">Delete</a>
                 </div>
             <?php endforeach; ?>

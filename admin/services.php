@@ -1,6 +1,11 @@
 <?php
 /**
  * Admin Services Management (With Image Uploads)
+ * ------------------------------------------------
+ * Works with the exact `services` table you posted:
+ *   id, title, description, icon, created_at, slug,
+ *   author, category, cover_image (default: placeholder.jpg),
+ *   icon_image (new column – optional)
  */
 
 declare(strict_types=1);
@@ -12,25 +17,32 @@ requireAdmin();
 
 $page_title = 'Manage Services';
 $success_message = '';
-$error_message = '';
+$error_message   = '';
 
 $upload_dir = __DIR__ . '/../uploads/services/';
 $upload_url = '/uploads/services/';
 
-$action = $_GET['action'] ?? 'list';
+$action     = $_GET['action'] ?? 'list';
 $service_id = $_GET['id'] ?? null;
 
-// Handle Delete
+/* -----------------------------------------------------------------
+ * 1. DELETE SERVICE
+ * ----------------------------------------------------------------- */
 if ($action === 'delete' && $service_id) {
     try {
-        $stmt = executeQuery("SELECT cover_image, icon_image FROM services WHERE id = ?", [$service_id]);
-        $img = $stmt->fetch();
-        if ($img) {
-            if (!empty($img['cover_image']) && file_exists(__DIR__ . '/..' . $img['cover_image'])) {
-                unlink(__DIR__ . '/..' . $img['cover_image']);
-            }
-            if (!empty($img['icon_image']) && file_exists(__DIR__ . '/..' . $img['icon_image'])) {
-                unlink(__DIR__ . '/..' . $img['icon_image']);
+        $stmt = executeQuery(
+            "SELECT cover_image, icon_image FROM services WHERE id = ?",
+            [$service_id]
+        );
+        $svc = $stmt->fetch();
+
+        if ($svc) {
+            // Delete old files (if they exist)
+            foreach (['cover_image', 'icon_image'] as $field) {
+                $path = $svc[$field] ?? '';
+                if ($path && file_exists(__DIR__ . '/../' . $path)) {
+                    @unlink(__DIR__ . '/../' . $path);
+                }
             }
         }
 
@@ -43,7 +55,9 @@ if ($action === 'delete' && $service_id) {
     }
 }
 
-// Handle Add/Edit Form Submission
+/* -----------------------------------------------------------------
+ * 2. ADD / EDIT FORM SUBMISSION
+ * ----------------------------------------------------------------- */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $title       = trim($_POST['title'] ?? '');
     $description = trim($_POST['description'] ?? '');
@@ -52,71 +66,104 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $category    = trim($_POST['category'] ?? '');
     $author      = trim($_POST['author'] ?? 'Admin');
 
-    // Image paths
-    $cover_image = $service['cover_image'] ?? '';
-    $icon_image  = $service['icon_image'] ?? '';
-
+    // -----------------------------------------------------------------
     // Auto-generate slug
+    // -----------------------------------------------------------------
     if (empty($slug) && !empty($title)) {
         $slug = strtolower(preg_replace('/[^a-z0-9]+/i', '-', $title));
     }
 
-    // Validate upload folder
+    // -----------------------------------------------------------------
+    // Ensure upload folder exists
+    // -----------------------------------------------------------------
     if (!is_dir($upload_dir)) {
-        mkdir($upload_dir, 0777, true);
+        mkdir($upload_dir, 0775, true);
     }
 
-    // Handle Cover Image Upload
+    // -----------------------------------------------------------------
+    // Current DB values (only needed for EDIT)
+    // -----------------------------------------------------------------
+    $cover_image = $icon_image = '';
+    if ($action === 'edit' && $service_id) {
+        $stmt = executeQuery("SELECT cover_image, icon_image FROM services WHERE id = ?", [$service_id]);
+        $svc  = $stmt->fetch();
+        $cover_image = $svc['cover_image'] ?? 'placeholder.jpg';
+        $icon_image  = $svc['icon_image'] ?? '';
+    } else {
+        $cover_image = 'placeholder.jpg';
+    }
+
+    // -----------------------------------------------------------------
+    // 2.1 COVER IMAGE UPLOAD
+    // -----------------------------------------------------------------
     if (!empty($_FILES['cover_image']['name'])) {
-        $cover_name = time() . '_' . basename($_FILES['cover_image']['name']);
-        $cover_target = $upload_dir . $cover_name;
-        $cover_ext = strtolower(pathinfo($cover_target, PATHINFO_EXTENSION));
-        $allowed_types = ['jpg', 'jpeg', 'png', 'webp'];
+        $ext   = strtolower(pathinfo($_FILES['cover_image']['name'], PATHINFO_EXTENSION));
+        $name  = time() . '_' . preg_replace('/[^a-z0-9\.\-_]/i', '', $_FILES['cover_image']['name']);
+        $target = $upload_dir . $name;
 
-        if (in_array($cover_ext, $allowed_types) && $_FILES['cover_image']['size'] <= 2 * 1024 * 1024) {
-            if (move_uploaded_file($_FILES['cover_image']['tmp_name'], $cover_target)) {
-                $cover_image = $upload_url . $cover_name;
+        $allowed = ['jpg', 'jpeg', 'png', 'webp'];
+        if (in_array($ext, $allowed) && $_FILES['cover_image']['size'] <= 2 * 1024 * 1024) {
+            if (move_uploaded_file($_FILES['cover_image']['tmp_name'], $target)) {
+                $cover_image = $upload_url . $name;
             } else {
-                $error_message = 'Error uploading cover image.';
+                $error_message = 'Failed to move cover image.';
             }
         } else {
-            $error_message = 'Invalid cover image file type or size (max 2MB).';
+            $error_message = 'Cover image: invalid type or size > 2 MB.';
         }
     }
 
-    // Handle Icon Image Upload
+    // -----------------------------------------------------------------
+    // 2.2 ICON IMAGE UPLOAD
+    // -----------------------------------------------------------------
     if (!empty($_FILES['icon_image']['name'])) {
-        $icon_name = time() . '_' . basename($_FILES['icon_image']['name']);
-        $icon_target = $upload_dir . $icon_name;
-        $icon_ext = strtolower(pathinfo($icon_target, PATHINFO_EXTENSION));
-        $allowed_types = ['jpg', 'jpeg', 'png', 'svg', 'webp'];
+        $ext   = strtolower(pathinfo($_FILES['icon_image']['name'], PATHINFO_EXTENSION));
+        $name  = time() . '_' . preg_replace('/[^a-z0-9\.\-_]/i', '', $_FILES['icon_image']['name']);
+        $target = $upload_dir . $name;
 
-        if (in_array($icon_ext, $allowed_types) && $_FILES['icon_image']['size'] <= 1 * 1024 * 1024) {
-            if (move_uploaded_file($_FILES['icon_image']['tmp_name'], $icon_target)) {
-                $icon_image = $upload_url . $icon_name;
+        $allowed = ['jpg', 'jpeg', 'png', 'svg', 'webp'];
+        if (in_array($ext, $allowed) && $_FILES['icon_image']['size'] <= 1 * 1024 * 1024) {
+            if (move_uploaded_file($_FILES['icon_image']['tmp_name'], $target)) {
+                $icon_image = $upload_url . $name;
             } else {
-                $error_message = 'Error uploading icon image.';
+                $error_message = 'Failed to move icon image.';
             }
         } else {
-            $error_message = 'Invalid icon image file type or size (max 1MB).';
+            $error_message = 'Icon image: invalid type or size > 1 MB.';
         }
     }
 
+    // -----------------------------------------------------------------
+    // 2.3 VALIDATE REQUIRED FIELDS
+    // -----------------------------------------------------------------
     if (empty($title) || empty($description)) {
-        $error_message = 'Please fill in all required fields.';
-    } elseif (empty($error_message)) {
+        $error_message = 'Title and description are required.';
+    }
+
+    // -----------------------------------------------------------------
+    // 2.4 SAVE TO DB
+    // -----------------------------------------------------------------
+    if (empty($error_message)) {
         try {
             if ($action === 'edit' && $service_id) {
                 $sql = "UPDATE services 
-                        SET title = ?, description = ?, icon = ?, slug = ?, category = ?, author = ?, 
-                            cover_image = ?, icon_image = ?
+                        SET title = ?, description = ?, icon = ?, slug = ?, 
+                            category = ?, author = ?, cover_image = ?, icon_image = ?
                         WHERE id = ?";
-                executeQuery($sql, [$title, $description, $icon, $slug, $category, $author, $cover_image, $icon_image, $service_id]);
+                executeQuery($sql, [
+                    $title, $description, $icon, $slug,
+                    $category, $author, $cover_image, $icon_image, $service_id
+                ]);
                 $success_message = 'Service updated successfully!';
             } else {
-                $sql = "INSERT INTO services (title, description, icon, slug, category, author, cover_image, icon_image, created_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())";
-                executeQuery($sql, [$title, $description, $icon, $slug, $category, $author, $cover_image, $icon_image]);
+                $sql = "INSERT INTO services 
+                        (title, description, icon, slug, category, author,
+                         cover_image, icon_image, created_at)
+                        VALUES (?,?,?, ?,?,?, ?,?, NOW())";
+                executeQuery($sql, [
+                    $title, $description, $icon, $slug,
+                    $category, $author, $cover_image, $icon_image
+                ]);
                 $success_message = 'Service added successfully!';
             }
             $action = 'list';
@@ -127,7 +174,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Fetch service for editing
+/* -----------------------------------------------------------------
+ * 3. FETCH SERVICE FOR EDIT FORM
+ * ----------------------------------------------------------------- */
 $service = null;
 if ($action === 'edit' && $service_id) {
     $stmt = executeQuery("SELECT * FROM services WHERE id = ?", [$service_id]);
@@ -138,12 +187,17 @@ if ($action === 'edit' && $service_id) {
     }
 }
 
-// Fetch all services
+/* -----------------------------------------------------------------
+ * 4. FETCH ALL SERVICES (LIST VIEW)
+ * ----------------------------------------------------------------- */
 $services = [];
 if ($action === 'list') {
     $services = executeQuery("SELECT * FROM services ORDER BY created_at DESC")->fetchAll();
 }
 
+/* -----------------------------------------------------------------
+ * 5. PAGE RENDERING
+ * ----------------------------------------------------------------- */
 require_once __DIR__ . '/includes/admin_header.php';
 ?>
 
@@ -153,22 +207,30 @@ require_once __DIR__ . '/includes/admin_header.php';
 </div>
 
 <?php if ($success_message): ?>
-    <div class="alert alert-success"><i data-feather="check-circle"></i> <?= sanitizeOutput($success_message) ?></div>
+    <div class="alert alert-success">
+        <i data-feather="check-circle"></i> <?= sanitizeOutput($success_message) ?>
+    </div>
 <?php endif; ?>
 
 <?php if ($error_message): ?>
-    <div class="alert alert-error"><i data-feather="alert-circle"></i> <?= sanitizeOutput($error_message) ?></div>
+    <div class="alert alert-error">
+        <i data-feather="alert-circle"></i> <?= sanitizeOutput($error_message) ?>
+    </div>
 <?php endif; ?>
 
 <?php if ($action === 'list'): ?>
     <div class="card">
         <div class="card-header">
             <h2>All Services</h2>
-            <a href="?action=add" class="btn btn-primary"><i data-feather="plus"></i> Add New Service</a>
+            <a href="?action=add" class="btn btn-primary">
+                <i data-feather="plus"></i> Add New Service
+            </a>
         </div>
 
         <?php if (empty($services)): ?>
-            <p>No services found. <a href="?action=add">Add your first service</a>!</p>
+            <p class="p-4">
+                No services found. <a href="?action=add">Add your first service</a>!
+            </p>
         <?php else: ?>
             <div class="table-container">
                 <table class="admin-table">
@@ -194,13 +256,15 @@ require_once __DIR__ . '/includes/admin_header.php';
                                     <?php endif; ?>
                                 </td>
                                 <td><strong><?= sanitizeOutput($svc['title']) ?></strong></td>
-                                <td><?= sanitizeOutput($svc['slug']) ?></td>
+                                <td><?= sanitizeOutput($svc['slug'] ?? '-') ?></td>
                                 <td><?= sanitizeOutput($svc['category'] ?? '-') ?></td>
                                 <td><?= sanitizeOutput($svc['author'] ?? 'Admin') ?></td>
                                 <td><?= date('M d, Y', strtotime($svc['created_at'])) ?></td>
                                 <td class="table-actions">
                                     <a href="?action=edit&id=<?= $svc['id'] ?>" class="btn-edit">Edit</a>
-                                    <a href="?action=delete&id=<?= $svc['id'] ?>" class="btn-delete" onclick="return confirm('Delete this service?')">Delete</a>
+                                    <a href="?action=delete&id=<?= $svc['id'] ?>"
+                                       class="btn-delete"
+                                       onclick="return confirm('Delete this service?')">Delete</a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -214,64 +278,71 @@ require_once __DIR__ . '/includes/admin_header.php';
     <div class="card">
         <div class="card-header">
             <h2><?= $action === 'edit' ? 'Edit Service' : 'Add New Service' ?></h2>
-            <a href="?action=list" class="btn btn-secondary"><i data-feather="arrow-left"></i> Back</a>
+            <a href="?action=list" class="btn btn-secondary">
+                <i data-feather="arrow-left"></i> Back
+            </a>
         </div>
 
-        <form method="POST" action="" enctype="multipart/form-data">
-            <div class="form-group">
-                <label>Service Title *</label>
+        <form method="POST" action="" enctype="multipart/form-data" class="p-4">
+            <div class="form-group mb-3">
+                <label class="form-label">Service Title *</label>
                 <input type="text" name="title" class="form-input" value="<?= $service['title'] ?? '' ?>" required>
             </div>
 
-            <div class="form-group">
-                <label>Slug (auto if blank)</label>
+            <div class="form-group mb-3">
+                <label class="form-label">Slug (auto if blank)</label>
                 <input type="text" name="slug" class="form-input" value="<?= $service['slug'] ?? '' ?>">
             </div>
 
-            <div class="form-group">
-                <label>Description *</label>
+            <div class="form-group mb-3">
+                <label class="form-label">Description *</label>
                 <textarea name="description" rows="6" class="form-textarea" required><?= $service['description'] ?? '' ?></textarea>
             </div>
 
-            <div class="form-group">
-                <label>Cover Image</label>
-                <?php if (!empty($service['cover_image'])): ?>
-                    <img src="<?= sanitizeOutput($service['cover_image']) ?>" alt="cover" width="120"><br>
+            <div class="form-group mb-3">
+                <label class="form-label">Cover Image</label>
+                <?php if (!empty($service['cover_image']) && $service['cover_image'] !== 'placeholder.jpg'): ?>
+                    <div class="mb-2">
+                        <img src="<?= sanitizeOutput($service['cover_image']) ?>" alt="cover" width="120">
+                    </div>
                 <?php endif; ?>
                 <input type="file" name="cover_image" accept=".jpg,.jpeg,.png,.webp">
-                <small>Max 2MB. Allowed: jpg, jpeg, png, webp</small>
+                <small class="text-muted">Max 2 MB – jpg, jpeg, png, webp</small>
             </div>
 
-            <div class="form-group">
-                <label>Icon Image (optional)</label>
+            <div class="form-group mb-3">
+                <label class="form-label">Icon Image (optional)</label>
                 <?php if (!empty($service['icon_image'])): ?>
-                    <img src="<?= sanitizeOutput($service['icon_image']) ?>" alt="icon" width="60"><br>
+                    <div class="mb-2">
+                        <img src="<?= sanitizeOutput($service['icon_image']) ?>" alt="icon" width="60">
+                    </div>
                 <?php endif; ?>
                 <input type="file" name="icon_image" accept=".jpg,.jpeg,.png,.svg,.webp">
-                <small>Max 1MB. Allowed: jpg, png, svg, webp</small>
+                <small class="text-muted">Max 1 MB – jpg, png, svg, webp</small>
             </div>
 
-            <div class="form-group">
-                <label>Icon Name (Feather icon fallback)</label>
+            <div class="form-group mb-3">
+                <label class="form-label">Feather Icon Name (fallback)</label>
                 <input type="text" name="icon" class="form-input" value="<?= $service['icon'] ?? 'tool' ?>">
             </div>
 
-            <div class="form-group">
-                <label>Category</label>
+            <div class="form-group mb-3">
+                <label class="form-label">Category</label>
                 <input type="text" name="category" class="form-input" value="<?= $service['category'] ?? '' ?>">
             </div>
 
-            <div class="form-group">
-                <label>Author</label>
+            <div class="form-group mb-4">
+                <label class="form-label">Author</label>
                 <input type="text" name="author" class="form-input" value="<?= $service['author'] ?? 'Admin' ?>">
             </div>
 
-            <div class="btn-group" style="margin-top: 2rem;">
-                <button type="submit" class="btn btn-primary"><i data-feather="save"></i> Save Service</button>
+            <div class="btn-group">
+                <button type="submit" class="btn btn-primary">
+                    <i data-feather="save"></i> Save Service
+                </button>
                 <a href="?action=list" class="btn btn-secondary">Cancel</a>
             </div>
         </form>
     </div>
 <?php endif; ?>
 
-<?php require_once __DIR__ . '/includes/admin_footer.php'; ?>

@@ -41,10 +41,10 @@ $testimonials = executeQuery("
 
 // ---------- 4. Latest 8 Projects (Gallery) ----------
 $featured_projects = executeQuery("
-    SELECT p.title, p.id, p.location, pi.image_path 
+    SELECT p.id, p.title, p.location,
+           (SELECT image_path FROM project_images WHERE project_id = p.id ORDER BY `order` ASC, id ASC LIMIT 1) AS image_path
     FROM projects p
-    JOIN project_images pi ON p.id = pi.project_id
-    GROUP BY p.id
+    WHERE EXISTS (SELECT 1 FROM project_images WHERE project_id = p.id)
     ORDER BY p.created_at DESC
     LIMIT 8
 ")->fetchAll();
@@ -58,9 +58,17 @@ $categories = executeQuery(
 $total_packages = executeQuery("SELECT COUNT(*) FROM packages WHERE is_active=1")->fetchColumn();
 
 $popular_packages = executeQuery(
-    "SELECT title, price_per_sqft FROM packages
-     WHERE is_active=1 ORDER BY display_order ASC LIMIT 3"
-)->fetchAll();
+    "SELECT p.title, p.price_per_sqft,
+           (SELECT image_path FROM project_images WHERE project_id = p.id ORDER BY `order` ASC, id ASC LIMIT 1) AS thumb
+     FROM packages p
+     WHERE p.is_active=1 
+     ORDER BY p.display_order ASC LIMIT 3
+")->fetchAll();
+
+// Paths
+$base_path = '/constructioninnagpur';
+$assets_path = $base_path . '/assets/images';
+$placeholder = 'https://via.placeholder.com/800x600/1A1A1A/F9A826?text=No+Image';
 
 require_once __DIR__ . '/includes/header.php';
 ?>
@@ -246,7 +254,7 @@ require_once __DIR__ . '/includes/header.php';
             border-radius: 12px;
             padding: 25px;
             margin: 25px 0;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            box-shadow: 0 5px 15px rgba(0,0,0,005);
         }
         .cost-item {
             display: flex;
@@ -513,33 +521,22 @@ require_once __DIR__ . '/includes/header.php';
 
 <main>
 
-    <!-- ==== GALLERY SLIDESHOW (Latest 8 Projects with Dummy Images) ==== -->
+    <!-- ==== GALLERY SLIDESHOW (Latest 8 Projects) ==== -->
     <section class="gallery-section">
         <div class="container">
             <h2 class="section-title gallery-title">Our Latest Projects</h2>
             <div class="swiper project-gallery-swiper">
                 <div class="swiper-wrapper">
-                    <?php 
-                    // Dummy project images for slideshow
-                    $dummy_project_images = [
-                        'https://images.unsplash.com/photo-1600585154340-7e0dc5f4d0ad?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
-                        'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
-                        'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
-                        'https://images.unsplash.com/photo-1600585154526-990dced4db0d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
-                        'https://images.unsplash.com/photo-1600607687644-c7171b42498b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
-                        'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
-                        'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
-                        'https://images.unsplash.com/photo-1600566753151-384129cf4e3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80'
-                    ];
-                    
-                    // Use actual project data but with dummy images
-                    foreach ($featured_projects as $index => $proj): 
-                        $dummy_img = $dummy_project_images[$index % count($dummy_project_images)];
+                    <?php foreach ($featured_projects as $proj): 
+                        $img_src = $proj['image_path'] 
+                            ? $assets_path . '/' . $proj['image_path']
+                            : $placeholder;
                     ?>
                     <div class="swiper-slide">
-                        <a href="/constructioninnagpur/project-info.php?id=<?= (int)$proj['id'] ?>" class="gallery-slide">
-                            <img src="<?= $dummy_img ?>" 
-                                 alt="<?= sanitizeOutput($proj['title']) ?>" loading="lazy">
+                        <a href="<?= $base_path ?>/project-info.php?id=<?= (int)$proj['id'] ?>" class="gallery-slide">
+                            <img src="<?= $img_src ?>" 
+                                 alt="<?= sanitizeOutput($proj['title']) ?>" loading="lazy"
+                                 onerror="this.src='<?= $placeholder ?>'">
                             <div class="gallery-overlay">
                                 <h3><?= sanitizeOutput($proj['title']) ?></h3>
                                 <p><?= sanitizeOutput($proj['location']) ?></p>
@@ -603,7 +600,7 @@ require_once __DIR__ . '/includes/header.php';
                                             </div>
                                         <?php endif; ?>
 
-                                        <a href="/constructioninnagpur/packages.php?id=<?= (int)$pkg['id'] ?>" 
+                                        <a href="<?= $base_path ?>/packages.php?id=<?= (int)$pkg['id'] ?>" 
                                            class="btn btn-outline-primary w-100 mt-3">
                                             View Full Details
                                         </a>
@@ -614,7 +611,7 @@ require_once __DIR__ . '/includes/header.php';
                     </div>
 
                     <div class="text-center mt-5">
-                        <a href="/constructioninnagpur/packages.php" class="btn btn-primary btn-lg">
+                        <a href="<?= $base_path ?>/packages.php" class="btn btn-primary btn-lg">
                             View All Packages
                         </a>
                     </div>
@@ -627,7 +624,7 @@ require_once __DIR__ . '/includes/header.php';
                         <!-- SEARCH -->
                         <div class="sidebar">
                             <h3 class="sidebar-title">Search Packages</h3>
-                            <form action="/constructioninnagpur/packages.php" method="get" class="search-box">
+                            <form action="<?= $base_path ?>/packages.php" method="get" class="search-box">
                                 <input type="text" name="search" placeholder="Search packages..." value="<?= sanitizeOutput($_GET['search'] ?? '') ?>">
                                 <button type="submit">Search</button>
                             </form>
@@ -637,12 +634,12 @@ require_once __DIR__ . '/includes/header.php';
                         <div class="sidebar">
                             <h3 class="sidebar-title">Categories</h3>
                             <ul class="category-list">
-                                <li><a href="/constructioninnagpur/packages.php" class="<?= empty($_GET['category']) ? 'active' : '' ?>">
+                                <li><a href="<?= $base_path ?>/packages.php" class="<?= empty($_GET['category']) ? 'active' : '' ?>">
                                     <span>All Packages</span>
                                     <span class="badge bg-dark text-white"><?= $total_packages ?></span>
                                 </a></li>
                                 <?php foreach ($categories as $c): ?>
-                                    <li><a href="/constructioninnagpur/packages.php?category=<?= urlencode($c['cat']) ?>"
+                                    <li><a href="<?= $base_path ?>/packages.php?category=<?= urlencode($c['cat']) ?>"
                                            class="<?= ($_GET['category'] ?? '') === $c['cat'] ? 'active' : '' ?>">
                                         <span><?= ucfirst(sanitizeOutput($c['cat'])) ?></span>
                                         <span class="badge bg-dark text-white"><?= $c['cnt'] ?></span>
@@ -659,23 +656,20 @@ require_once __DIR__ . '/includes/header.php';
                             </h3>
                             <div class="swiper popularPackagesSwiper">
                                 <div class="swiper-wrapper">
-                                    <?php 
-                                    $dummy_images = [
-                                        'https://images.unsplash.com/photo-1581093458791-9d6e0b2a3b5a?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
-                                        'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
-                                        'https://images.unsplash.com/photo-1613490493576-7fde63acd811?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80'
-                                    ];
-                                    foreach ($popular_packages as $index => $p): 
-                                        $dummy_img = $dummy_images[$index % 3];
+                                    <?php foreach ($popular_packages as $p): 
+                                        $thumb = $p['thumb'] 
+                                            ? $assets_path . '/' . $p['thumb']
+                                            : $placeholder;
                                     ?>
                                         <div class="swiper-slide">
                                             <div class="popular-package">
                                                 <div class="popular-package-image">
-                                                    <img src="<?= $dummy_img ?>" alt="<?= sanitizeOutput($p['title']) ?>" loading="lazy">
+                                                    <img src="<?= $thumb ?>" alt="<?= sanitizeOutput($p['title']) ?>" loading="lazy"
+                                                         onerror="this.src='<?= $placeholder ?>'">
                                                 </div>
                                                 <div class="flex-grow-1">
                                                     <div class="popular-package-title">
-                                                        <a href="/constructioninnagpur/select-plan.php?plan=<?= urlencode($p['title']) ?>">
+                                                        <a href="<?= $base_path ?>/select-plan.php?plan=<?= urlencode($p['title']) ?>">
                                                             <?= sanitizeOutput($p['title']) ?>
                                                         </a>
                                                     </div>
@@ -697,7 +691,8 @@ require_once __DIR__ . '/includes/header.php';
             </div>
         </div>
     </section>
- <!-- ==== ENHANCED PROFESSIONAL ESTIMATOR ==== -->
+
+    <!-- ==== ENHANCED PROFESSIONAL ESTIMATOR ==== -->
     <section id="estimator" class="section-padding estimator-section">
         <div class="container">
             <div class="estimator-box">
@@ -770,7 +765,7 @@ require_once __DIR__ . '/includes/header.php';
                     <i class="fas fa-calculator me-2"></i>Calculate Detailed Estimate
                 </button>
 
-                <!-- Enhanced Professional Result -->
+                <!-- Result -->
                 <div class="estimate-result mt-4" id="estimateResult" style="display:none;">
                     <div class="text-center mb-4">
                         <h4 class="mb-2">Your Construction Estimate</h4>
@@ -804,7 +799,7 @@ require_once __DIR__ . '/includes/header.php';
                     </div>
 
                     <div class="d-grid gap-2 mt-4">
-                        <a href="/constructioninnagpur/contact.php?estimate=true" class="btn btn-primary btn-lg">
+                        <a href="<?= $base_path ?>/contact.php?estimate=true" class="btn btn-primary btn-lg">
                             <i class="fas fa-calendar-check me-2"></i>Schedule Free Site Visit
                         </a>
                         <a href="tel:+919876543210" class="btn btn-outline-primary">
@@ -816,7 +811,6 @@ require_once __DIR__ . '/includes/header.php';
         </div>
     </section>
 
-   
     <!-- ==== TESTIMONIALS ==== -->
     <section class="section-padding bg-light-alt">
         <div class="container">
@@ -866,10 +860,10 @@ require_once __DIR__ . '/includes/header.php';
                 <h2 class="display-5 fw-bold mb-4">Ready to Build Your Dream Home?</h2>
                 <p class="lead mb-4">Let's discuss your vision. Get a free consultation today.</p>
                 <div class="d-flex justify-content-center gap-3 flex-wrap">
-                    <a href="/constructioninnagpur/contact.php" class="btn btn-primary btn-lg">
+                    <a href="<?= $base_path ?>/contact.php" class="btn btn-primary btn-lg">
                         Contact Us
                     </a>
-                    <a href="/constructioninnagpur/projects.php" class="btn btn-outline-light btn-lg">
+                    <a href="<?= $base_path ?>/projects.php" class="btn btn-outline-light btn-lg">
                         View All Projects
                     </a>
                 </div>
@@ -883,7 +877,7 @@ require_once __DIR__ . '/includes/header.php';
 <!-- Swiper JS -->
 <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
 <script>
-    // Enhanced Gallery Swiper
+    // Gallery Swiper
     const swiper = new Swiper('.project-gallery-swiper', {
         loop: true,
         autoplay: { delay: 5000, disableOnInteraction: false },
@@ -898,7 +892,7 @@ require_once __DIR__ . '/includes/header.php';
         }
     });
 
-    // Popular Packages Auto-Slideshow
+    // Popular Packages Swiper
     const popularSwiper = new Swiper('.popularPackagesSwiper', {
         loop: true,
         autoplay: { delay: 3000, disableOnInteraction: false },
@@ -908,7 +902,7 @@ require_once __DIR__ . '/includes/header.php';
         speed: 800
     });
 
-    // Enhanced Professional Estimate Calculator
+    // Estimate Calculator
     function calculateEstimate() {
         const sqft = parseFloat(document.getElementById('squareFootage').value) || 0;
         const select = document.getElementById('packageType');
@@ -941,11 +935,10 @@ require_once __DIR__ . '/includes/header.php';
         document.getElementById('packageName').textContent = pkgName ? `(${pkgName})` : '';
         document.getElementById('estimateResult').style.display = 'block';
         
-        // Scroll to result
         document.getElementById('estimateResult').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
-    // Addon card click handlers
+    // Addon card click
     document.querySelectorAll('.addon-card').forEach(card => {
         card.addEventListener('click', function() {
             const checkbox = this.querySelector('input[type="checkbox"]');
@@ -955,15 +948,13 @@ require_once __DIR__ . '/includes/header.php';
         });
     });
 
-    // Auto-calculate on input change
+    // Auto-calculate
     document.getElementById('squareFootage').addEventListener('input', calculateEstimate);
     document.getElementById('packageType').addEventListener('change', calculateEstimate);
     document.querySelectorAll('#addSolar, #addGarden, #addSmart').forEach(cb => {
         cb.addEventListener('change', function() {
             const card = this.closest('.addon-card');
-            if (card) {
-                card.classList.toggle('selected', this.checked);
-            }
+            if (card) card.classList.toggle('selected', this.checked);
             calculateEstimate();
         });
     });

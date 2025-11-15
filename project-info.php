@@ -2,6 +2,7 @@
 /**
  * Project Info Page – Grand Jyothi Construction
  * Modern design 100% aligned with blog‑detail.php
+ * Uses project_images only (NO image column in projects)
  */
 
 declare(strict_types=1);
@@ -32,17 +33,23 @@ if (!$project) {
     exit;
 }
 
-/* ---------- Gallery ---------- */
+/* ---------- Gallery (ordered) ---------- */
 $imgStmt = executeQuery(
-    "SELECT image_path, caption FROM project_images WHERE project_id = ? ORDER BY id ASC",
+    "SELECT image_path, caption FROM project_images WHERE project_id = ? ORDER BY `order` ASC, id ASC",
     [$project_id]
 );
 $images = $imgStmt->fetchAll(PDO::FETCH_ASSOC);
 
+/* ---------- Paths ---------- */
+$base_path = '/constructioninnagpur';
+$assets_path = $base_path . '/assets/images';
+$placeholder_main = 'https://via.placeholder.com/1200x520/1A1A1A/F9A826?text=No+Image';
+$placeholder_thumb = 'https://via.placeholder.com/100/1A1A1A/F9A826?text=NA';
+
 /* ---------- Related (same type) ---------- */
 $related_projects = executeQuery(
     "SELECT p.id, p.title, p.location,
-            (SELECT image_path FROM project_images WHERE project_id = p.id LIMIT 1) AS thumb
+            (SELECT image_path FROM project_images WHERE project_id = p.id ORDER BY `order` ASC, id ASC LIMIT 1) AS thumb
      FROM projects p
      WHERE p.type = ? AND p.id != ? AND p.status = 'completed'
      ORDER BY p.completed_on DESC LIMIT 3",
@@ -80,7 +87,7 @@ $total_projects = executeQuery("SELECT COUNT(*) FROM projects")->fetchColumn();
 /* Popular projects (latest) */
 $popular_projects = executeQuery(
     "SELECT p.id, p.title, p.location,
-            (SELECT image_path FROM project_images WHERE project_id = p.id LIMIT 1) AS thumb
+            (SELECT image_path FROM project_images WHERE project_id = p.id ORDER BY `order` ASC, id ASC LIMIT 1) AS thumb
      FROM projects p
      ORDER BY p.created_at DESC LIMIT 3"
 )->fetchAll();
@@ -115,16 +122,21 @@ require_once __DIR__ . '/includes/header.php';
         .btn-primary:hover{background:#e89a1f;border-color:#e89a1f;color:var(--charcoal);}
 
         /* ==== HERO ==== */
-        .project-banner{height:500px;background:linear-gradient(rgba(26,26,26,.6),rgba(26,26,26,.6)),
-            url('/constructioninnagpur/assets/images/projects/<?= htmlspecialchars($images[0]['image_path'] ?? '') ?>') center/cover no-repeat;
-            display:flex;align-items:flex-end;padding:60px 0;color:var(--white);position:relative;}
+        .project-banner{
+            height:500px;
+            background:linear-gradient(rgba(26,26,26,.6),rgba(26,26,26,.6)),
+                url('<?= !empty($images) ? $assets_path . '/' . $images[0]['image_path'] : $placeholder_main ?>') center/cover no-repeat;
+            display:flex;align-items:flex-end;padding:60px 0;color:var(--white);position:relative;
+        }
         .project-banner::before{content:'';position:absolute;inset:0;
             background:linear-gradient(135deg,rgba(249,168,38,.1) 0%,transparent 70%);}
         .project-title{font-size:3rem;margin-bottom:20px;line-height:1.2;}
         .project-meta{display:flex;flex-wrap:wrap;gap:15px;align-items:center;}
         .badge-type,.badge-status{background:var(--primary-yellow);color:var(--charcoal);padding:5px 15px;border-radius:20px;font-size:.9rem;font-weight:600;}
-        .badge-status{background:<?= $project['status']==='completed'?'#28a745':($project['status']==='current'?'#ffc107':'#17a2b8') ?>;
-            color:<?= $project['status']==='current'?'var(--charcoal)':'var(--white)' ?>;}
+        .badge-status{
+            background:<?= $project['status']==='completed'?'#28a745':($project['status']==='current'?'#ffc107':'#17a2b8') ?>;
+            color:<?= $project['status']==='current'?'var(--charcoal)':'var(--white)' ?>;
+        }
 
         /* ==== CONTENT ==== */
         .project-content-section{padding:80px 0;}
@@ -133,7 +145,7 @@ require_once __DIR__ . '/includes/header.php';
         .project-content img{max-width:100%;border-radius:8px;margin:30px 0;box-shadow:0 5px 15px rgba(0,0,0,.1);}
 
         /* ==== GALLERY ==== */
-        .main-gallery-image{height:520px;object-fit:cover;border-radius:12px;cursor:zoom-in;transition:.4s;}
+        .main-gallery-image{height:520px;object-fit:cover;border-radius:12px;cursor:zoom-in;transition:.4s;width:100%;}
         .main-gallery-image:hover{transform:scale(1.02);}
         .thumb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:12px;margin-top:20px;}
         .thumb-img{height:100px;object-fit:cover;border-radius:8px;cursor:pointer;border:3px solid transparent;transition:.3s;}
@@ -225,29 +237,30 @@ require_once __DIR__ . '/includes/header.php';
     <div class="container">
         <div class="row">
 
-            <!-- ==== LEFT COLUMN (Gallery + Description + Nav + Related) ==== -->
+            <!-- ==== LEFT COLUMN ==== -->
             <div class="col-lg-8">
 
                 <!-- Gallery -->
                 <div class="mb-5">
                     <?php if (!empty($images)): ?>
                         <img id="mainGalleryImage"
-                             src="/constructioninnagpur/assets/images/projects/<?= htmlspecialchars($images[0]['image_path']) ?>"
+                             src="<?= $assets_path . '/' . $images[0]['image_path'] ?>"
                              alt="<?= sanitizeOutput($project['title']) ?>"
-                             class="img-fluid w-100 main-gallery-image">
+                             class="main-gallery-image"
+                             onerror="this.src='<?= $placeholder_main ?>'">
                         <?php if (count($images) > 1): ?>
                             <div class="thumb-grid mt-4">
                                 <?php foreach ($images as $i => $img): ?>
-                                    <img src="/constructioninnagpur/assets/images/projects/<?= htmlspecialchars($img['image_path']) ?>"
+                                    <img src="<?= $assets_path . '/' . $img['image_path'] ?>"
                                          alt="<?= htmlspecialchars($img['caption'] ?? '') ?>"
                                          class="thumb-img <?= $i===0?'active':'' ?>"
-                                         onclick="changeMainImage(this.src,this)">
+                                         onclick="changeMainImage(this.src,this)"
+                                         onerror="this.src='<?= $placeholder_thumb ?>'">
                                 <?php endforeach; ?>
                             </div>
                         <?php endif; ?>
                     <?php else: ?>
-                        <img src="https://via.placeholder.com/1200x520/1A1A1A/F9A826?text=No+Image"
-                             class="img-fluid w-100 main-gallery-image" alt="No image">
+                        <img src="<?= $placeholder_main ?>" class="main-gallery-image" alt="No image">
                     <?php endif; ?>
                 </div>
 
@@ -301,14 +314,14 @@ require_once __DIR__ . '/includes/header.php';
                         <div class="row g-4">
                             <?php foreach ($related_projects as $r):
                                 $thumb = $r['thumb']
-                                    ? "/constructioninnagpur/assets/images/projects/{$r['thumb']}"
-                                    : "https://via.placeholder.com/400x300";
+                                    ? $assets_path . '/' . $r['thumb']
+                                    : $placeholder_main;
                             ?>
                                 <div class="col-md-4">
                                     <a href="project-info.php?id=<?= $r['id'] ?>" class="text-decoration-none">
                                         <div class="related-project-card">
                                             <div class="related-project-image">
-                                                <img src="<?= $thumb ?>" alt="<?= sanitizeOutput($r['title']) ?>">
+                                                <img src="<?= $thumb ?>" alt="<?= sanitizeOutput($r['title']) ?>" onerror="this.src='<?= $placeholder_main ?>'">
                                             </div>
                                             <div class="related-project-content">
                                                 <h4 class="related-project-title">
@@ -332,7 +345,7 @@ require_once __DIR__ . '/includes/header.php';
                 <!-- 1. SEARCH -->
                 <div class="sidebar">
                     <h3 class="sidebar-title">Search Projects</h3>
-                    <form action="/constructioninnagpur/projects.php" method="get" class="search-box">
+                    <form action="<?= $base_path ?>/projects.php" method="get" class="search-box">
                         <input type="text" name="search" placeholder="Search projects..." value="<?= sanitizeOutput($_GET['search'] ?? '') ?>">
                         <button type="submit"><i class="fas fa-search"></i></button>
                     </form>
@@ -382,28 +395,28 @@ require_once __DIR__ . '/includes/header.php';
 
                     <hr class="my-4">
                     <div class="d-grid gap-2">
-                        <a href="/constructioninnagpur/contact.php" class="btn btn-primary">
+                        <a href="<?= $base_path ?>/contact.php" class="btn btn-primary">
                             <i class="fas fa-phone-alt me-2"></i> Get Quote
                         </a>
-                        <a href="/constructioninnagpur/projects.php" class="btn btn-outline-dark">
+                        <a href="<?= $base_path ?>/projects.php" class="btn btn-outline-dark">
                             <i class="fas fa-arrow-left me-2"></i> All Projects
                         </a>
                     </div>
                 </div>
 
-                <!-- 3. PROJECT TYPES (Categories) -->
+                <!-- 3. PROJECT TYPES -->
                 <div class="sidebar">
                     <h3 class="sidebar-title">Project Types</h3>
                     <ul class="category-list">
                         <li>
-                            <a href="/constructioninnagpur/projects.php" class="<?= empty($_GET['type']) ? 'active' : '' ?>">
+                            <a href="<?= $base_path ?>/projects.php" class="<?= empty($_GET['type']) ? 'active' : '' ?>">
                                 <span>All Projects</span>
                                 <span class="category-count"><?= $total_projects ?></span>
                             </a>
                         </li>
                         <?php foreach ($types as $t): ?>
                             <li>
-                                <a href="/constructioninnagpur/projects.php?type=<?= urlencode($t['type']) ?>"
+                                <a href="<?= $base_path ?>/projects.php?type=<?= urlencode($t['type']) ?>"
                                    class="<?= ($_GET['type'] ?? '') === $t['type'] ? 'active' : '' ?>">
                                     <span><?= ucfirst(sanitizeOutput($t['type'])) ?></span>
                                     <span class="category-count"><?= $t['count'] ?></span>
@@ -419,12 +432,12 @@ require_once __DIR__ . '/includes/header.php';
                     <ul class="p-0 m-0">
                         <?php foreach ($popular_projects as $p):
                             $thumb = $p['thumb']
-                                ? "/constructioninnagpur/assets/images/projects/{$p['thumb']}"
-                                : "https://via.placeholder.com/70";
+                                ? $assets_path . '/' . $p['thumb']
+                                : $placeholder_thumb;
                         ?>
                             <li class="popular-post">
                                 <div class="popular-post-image">
-                                    <img src="<?= $thumb ?>" alt="<?= sanitizeOutput($p['title']) ?>" class="rounded">
+                                    <img src="<?= $thumb ?>" alt="<?= sanitizeOutput($p['title']) ?>" class="rounded" onerror="this.src='<?= $placeholder_thumb ?>'">
                                 </div>
                                 <div class="popular-post-content">
                                     <h4 class="popular-post-title">
@@ -449,7 +462,8 @@ require_once __DIR__ . '/includes/header.php';
 <script>
 /* Gallery */
 function changeMainImage(src, el){
-    document.getElementById('mainGalleryImage').src = src;
+    const main = document.getElementById('mainGalleryImage');
+    main.src = src;
     document.querySelectorAll('.thumb-img').forEach(i=>i.classList.remove('active'));
     el.classList.add('active');
 }

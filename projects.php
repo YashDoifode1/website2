@@ -1,27 +1,29 @@
 <?php
 /**
  * Projects Page - Grand Jyothi Construction
- * Filterable Grid + Sidebar (Search, Types, Popular)
- * Matches blog-detail.php & project-info.php design
+ * Filterable Grid + Mini 3-Image Slider per Project
+ * Uses project_images only (NO image column in projects)
  */
 
 declare(strict_types=1);
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/security.php';
 
+// Define base paths
+$base_path = '/constructioninnagpur';
+$assets_path = $base_path . '/assets/images';
+$placeholder_main = 'https://via.placeholder.com/600x400/1A1A1A/F9A826?text=No+Image';
+$placeholder_sidebar = 'https://via.placeholder.com/70x70/eeeeee/999999?text=NA';
+
 $page_title = 'Our Projects | Grand Jyothi Construction';
 
-// Fetch all projects with first image as thumbnail
+// ---------------------------------------------------------------------
+// Fetch all projects with first 3 gallery images
+// ---------------------------------------------------------------------
 $sql = "
     SELECT 
-        p.id, p.title, p.location, p.type, p.status, p.completed_on, p.size, p.duration,
-        pi.image_path AS thumbnail
+        p.id, p.title, p.location, p.type, p.status, p.completed_on, p.size, p.duration
     FROM projects p
-    LEFT JOIN (
-        SELECT project_id, image_path 
-        FROM project_images 
-        ORDER BY id ASC LIMIT 1
-    ) pi ON p.id = pi.project_id
     ORDER BY 
         CASE WHEN p.status = 'current' THEN 1
              WHEN p.status = 'future' THEN 2
@@ -29,7 +31,19 @@ $sql = "
         END, p.created_at DESC
 ";
 $stmt = executeQuery($sql);
-$projects = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$all_projects = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Fetch up to 3 images for each project
+$projects = [];
+foreach ($all_projects as $p) {
+    $imgs = executeQuery(
+        "SELECT image_path FROM project_images WHERE project_id = ? ORDER BY `order` ASC, id ASC LIMIT 3",
+        [$p['id']]
+    )->fetchAll(PDO::FETCH_COLUMN);
+
+    $p['gallery'] = $imgs;
+    $projects[] = $p;
+}
 
 // Project types with counts
 $types = executeQuery("
@@ -41,9 +55,6 @@ $types = executeQuery("
 ")->fetchAll();
 
 $total_projects = count($projects);
-
-
-// Popular projects (latest 3)
 $popular_projects = array_slice($projects, 0, 3);
 
 require_once __DIR__ . '/includes/header.php';
@@ -79,22 +90,23 @@ require_once __DIR__ . '/includes/header.php';
             font-weight: 600;
         }
 
-        .btn-primary {
-            background-color: var(--primary-yellow);
-            border-color: var(--primary-yellow);
-            color: var(--charcoal);
+        .btn-custom-primary {
+            background-color: var(--primary-yellow) !important;
+            border-color: var(--primary-yellow) !important;
+            color: var(--charcoal) !important;
             font-weight: 600;
             padding: 10px 25px;
             border-radius: 8px;
+            text-decoration: none;
+            transition: all 0.3s ease;
         }
 
-        .btn-primary:hover {
-            background-color: #e89a1f;
-            border-color: #e89a1f;
-            color: var(--charcoal);
+        .btn-custom-primary:hover {
+            background-color: #e89a1f !important;
+            border-color: #e89a1f !important;
+            color: var(--charcoal) !important;
         }
 
-        /* Hero Banner */
         .projects-banner {
             height: 500px;
             background: linear-gradient(rgba(26, 26, 26, 0.6), rgba(26, 26, 26, 0.6)),
@@ -130,7 +142,6 @@ require_once __DIR__ . '/includes/header.php';
             opacity: 0.9;
         }
 
-        /* Breadcrumb */
         .breadcrumb {
             background: transparent;
             padding: 0;
@@ -146,20 +157,10 @@ require_once __DIR__ . '/includes/header.php';
             color: var(--primary-yellow);
         }
 
-        /* Content Section */
         .projects-content-section {
             padding: 80px 0;
         }
 
-        .section-title {
-            font-size: 1.8rem;
-            margin-bottom: 30px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid var(--primary-yellow);
-            display: inline-block;
-        }
-
-        /* Filter Bar */
         .filter-bar {
             background: var(--light-gray);
             border-radius: 10px;
@@ -184,6 +185,8 @@ require_once __DIR__ . '/includes/header.php';
             font-weight: 500;
             transition: all 0.3s ease;
             cursor: pointer;
+            display: inline-block;
+            text-align: center;
         }
 
         .filter-btn.active,
@@ -191,14 +194,6 @@ require_once __DIR__ . '/includes/header.php';
             background: var(--primary-yellow);
             border-color: var(--primary-yellow);
             color: var(--charcoal);
-        }
-
-        .status-indicator {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            margin-right: 6px;
         }
 
         .active-filters {
@@ -213,9 +208,9 @@ require_once __DIR__ . '/includes/header.php';
             font-weight: 600;
             margin-left: 10px;
             cursor: pointer;
+            text-decoration: underline;
         }
 
-        /* Projects Grid */
         .projects-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -238,26 +233,54 @@ require_once __DIR__ . '/includes/header.php';
 
         .project-image {
             height: 220px;
-            overflow: hidden;
             position: relative;
+            overflow: hidden;
         }
 
-        .project-image img {
+        .image-slider {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        .slider-img {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            transition: transform 0.5s ease;
+            position: absolute;
+            top: 0;
+            left: 0;
+            transition: opacity 0.4s ease;
         }
 
-        .project-card:hover .project-image img {
-            transform: scale(1.08);
+        .slider-dots {
+            position: absolute;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 6px;
+            z-index: 3;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.5);
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .dot.active {
+            background: #fff;
         }
 
         .status-badge {
             position: absolute;
             top: 15px;
             right: 15px;
-            z-index: 2;
+            z-index: 4;
         }
 
         .project-content {
@@ -312,7 +335,6 @@ require_once __DIR__ . '/includes/header.php';
             align-items: center;
         }
 
-        /* Sidebar */
         .sidebar {
             background-color: var(--light-gray);
             border-radius: 10px;
@@ -428,7 +450,6 @@ require_once __DIR__ . '/includes/header.php';
             color: var(--primary-yellow);
         }
 
-        /* CTA Section */
         .cta-section {
             background: linear-gradient(135deg, var(--charcoal) 0%, #2d2d2d 100%);
             color: white;
@@ -453,7 +474,6 @@ require_once __DIR__ . '/includes/header.php';
             border-color: white;
         }
 
-        /* Responsive */
         @media (max-width: 768px) {
             .projects-banner {
                 height: 400px;
@@ -476,7 +496,7 @@ require_once __DIR__ . '/includes/header.php';
         <div class="banner-content">
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="/constructioninnagpur/">Home</a></li>
+                    <li class="breadcrumb-item"><a href="<?= $base_path ?>/">Home</a></li>
                     <li class="breadcrumb-item active" aria-current="page">Projects</li>
                 </ol>
             </nav>
@@ -500,9 +520,8 @@ require_once __DIR__ . '/includes/header.php';
                             <div class="filter-group">
                                 <button class="filter-btn active" data-filter="all">All Projects</button>
                                 <?php 
-                                $allTypes = array_unique(array_column($projects, 'type'));
+                                $allTypes = array_unique(array_filter(array_column($projects, 'type')));
                                 foreach ($allTypes as $type): 
-                                    if (!$type) continue;
                                 ?>
                                     <button class="filter-btn" data-filter="<?= strtolower($type) ?>">
                                         <?= ucfirst($type) ?>
@@ -514,15 +533,9 @@ require_once __DIR__ . '/includes/header.php';
                             <h6 class="mb-3">Filter by Status</h6>
                             <div class="filter-group">
                                 <button class="filter-btn-status active" data-status="all">All Status</button>
-                                <button class="filter-btn-status" data-status="current">
-                                    <span class="status-indicator bg-success"></span> Current
-                                </button>
-                                <button class="filter-btn-status" data-status="future">
-                                    <span class="status-indicator bg-warning"></span> Future
-                                </button>
-                                <button class="filter-btn-status" data-status="completed">
-                                    <span class="status-indicator bg-primary"></span> Completed
-                                </button>
+                                <button class="filter-btn-status" data-status="current">Current</button>
+                                <button class="filter-btn-status" data-status="future">Future</button>
+                                <button class="filter-btn-status" data-status="completed">Completed</button>
                             </div>
                         </div>
                     </div>
@@ -535,7 +548,6 @@ require_once __DIR__ . '/includes/header.php';
                 <div class="projects-grid" id="projectsGrid">
                     <?php if (empty($projects)): ?>
                         <div class="text-center py-5">
-                            <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
                             <h4 class="text-muted">No Projects Available</h4>
                             <p class="text-muted">We're updating our portfolio. Check back soon!</p>
                         </div>
@@ -543,39 +555,63 @@ require_once __DIR__ . '/includes/header.php';
                         <?php foreach ($projects as $p): 
                             $type = strtolower($p['type'] ?? 'residential');
                             $status = $p['status'] ?? 'completed';
-                            $thumb = $p['thumbnail'] 
-                                ? "/constructioninnagpur/assets/images/projects/{$p['thumbnail']}" 
-                                : "https://via.placeholder.com/600x400/1A1A1A/F9A826?text=" . urlencode($p['title']);
                             $date = $p['completed_on'] ? date('F Y', strtotime($p['completed_on'])) : 'Planned';
+                            $images = $p['gallery'];
                         ?>
                             <div class="project-card" 
                                  data-type="<?= $type ?>" 
-                                 data-status="<?= $status ?>">
+                                 data-status="<?= $status ?>"
+                                 data-project-id="<?= $p['id'] ?>">
                                 <a href="project-info.php?id=<?= $p['id'] ?>" class="text-decoration-none">
                                     <div class="project-image">
-                                        <img src="<?= $thumb ?>" alt="<?= sanitizeOutput($p['title']) ?>" loading="lazy">
+                                        <div class="image-slider">
+                                            <?php if (empty($images)): ?>
+                                                <img src="<?= $placeholder_main ?>" alt="No Image" class="slider-img">
+                                            <?php else: ?>
+                                                <?php foreach ($images as $idx => $img_path): 
+                                                    $src = $assets_path . '/' . $img_path;
+                                                    $display = $idx === 0 ? 'block' : 'none';
+                                                ?>
+                                                    <img src="<?= $src ?>" 
+                                                         alt="<?= sanitizeOutput($p['title']) ?> - Image <?= $idx + 1 ?>" 
+                                                         class="slider-img"
+                                                         style="display:<?= $display ?>;"
+                                                         onerror="this.src='<?= $placeholder_main ?>'">
+                                                <?php endforeach; ?>
+                                            <?php endif; ?>
+
+                                            <?php if (count($images) > 1): ?>
+                                                <div class="slider-dots">
+                                                    <?php for ($i = 0; $i < count($images); $i++): ?>
+                                                        <span class="dot <?= $i === 0 ? 'active' : '' ?>"
+                                                              onclick="showProjectSlide(<?= $p['id'] ?>, <?= $i ?>)"></span>
+                                                    <?php endfor; ?>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+
                                         <div class="status-badge">
                                             <span class="badge <?= $status === 'current' ? 'bg-success' : ($status === 'future' ? 'bg-warning text-dark' : 'bg-primary') ?>">
                                                 <?= ucfirst($status) ?>
                                             </span>
                                         </div>
                                     </div>
+
                                     <div class="project-content">
                                         <div class="project-meta">
-                                            <span class="meta-tag"><i class="fas fa-tag me-1"></i> <?= ucfirst($type) ?></span>
+                                            <span class="meta-tag"><?= ucfirst($type) ?></span>
                                             <?php if ($p['size']): ?>
-                                                <span class="meta-tag"><i class="fas fa-ruler-combined me-1"></i> <?= sanitizeOutput($p['size']) ?> sq.ft</span>
+                                                <span class="meta-tag"><?= sanitizeOutput($p['size']) ?> sq.ft</span>
                                             <?php endif; ?>
                                         </div>
                                         <h4 class="project-title">
                                             <?= sanitizeOutput($p['title']) ?>
                                         </h4>
                                         <div class="project-location">
-                                            <i class="fas fa-map-marker-alt text-primary me-1"></i>
                                             <?= sanitizeOutput($p['location']) ?>
                                         </div>
                                         <div class="project-date">
-                                            <i class="far fa-calendar-alt me-1"></i> <?= $date ?>
+                                            <?= $date ?>
                                         </div>
                                     </div>
                                 </a>
@@ -584,7 +620,6 @@ require_once __DIR__ . '/includes/header.php';
                     <?php endif; ?>
                 </div>
 
-                <!-- Results Counter -->
                 <div class="text-center mt-4">
                     <p class="text-muted" id="resultsCount">
                         Showing <span id="visibleCount"><?= count($projects) ?></span> of <?= count($projects) ?> projects
@@ -599,7 +634,7 @@ require_once __DIR__ . '/includes/header.php';
                     <h3 class="sidebar-title">Search Projects</h3>
                     <form action="" method="get" class="search-box">
                         <input type="text" name="search" placeholder="Search projects..." value="<?= sanitizeOutput($_GET['search'] ?? '') ?>">
-                        <button type="submit"><i class="fas fa-search"></i></button>
+                        <button type="submit">Search</button>
                     </form>
                 </div>
 
@@ -624,17 +659,17 @@ require_once __DIR__ . '/includes/header.php';
                 <div class="sidebar">
                     <h3 class="sidebar-title">Popular Projects</h3>
                     <?php foreach ($popular_projects as $p): 
-                        $thumb = $p['thumbnail'] ? "/constructioninnagpur/assets/images/projects/{$p['thumbnail']}" : "assets/images/projects/placeholder.jpeg";
+                        $thumb = !empty($p['gallery']) ? $assets_path . '/' . $p['gallery'][0] : $placeholder_sidebar;
                     ?>
                         <div class="popular-project">
                             <div class="popular-project-image">
-                                <img src="assets/images/projects<?= $thumb ?>" alt="<?= sanitizeOutput($p['title']) ?>">
+                                <img src="<?= $thumb ?>" alt="<?= sanitizeOutput($p['title']) ?>" onerror="this.src='<?= $placeholder_sidebar ?>'">
                             </div>
                             <div>
                                 <div class="popular-project-title">
                                     <a href="project-info.php?id=<?= $p['id'] ?>"><?= sanitizeOutput($p['title']) ?></a>
                                 </div>
-                                <div class="text-muted small"><i class="fas fa-map-marker-alt me-1"></i> <?= sanitizeOutput($p['location']) ?></div>
+                                <div class="text-muted small"><?= sanitizeOutput($p['location']) ?></div>
                             </div>
                         </div>
                     <?php endforeach; ?>
@@ -652,11 +687,11 @@ require_once __DIR__ . '/includes/header.php';
                 <h2 class="display-5 fw-bold mb-4">Ready to Build Your Dream?</h2>
                 <p class="lead mb-4">Let's discuss your vision and create something extraordinary together</p>
                 <div class="d-flex justify-content-center gap-3 flex-wrap">
-                    <a href="/constructioninnagpur/contact.php" class="btn btn-primary btn-lg">
-                        <i class="fas fa-phone-alt me-2"></i>Get Free Consultation
+                    <a href="<?= $base_path ?>/contact.php" class="btn btn-custom-primary btn-lg">
+                        Get Free Consultation
                     </a>
-                    <a href="/constructioninnagpur/services.php" class="btn btn-outline-light btn-lg">
-                        <i class="fas fa-tools me-2"></i>Our Services
+                    <a href="<?= $base_path ?>/services.php" class="btn btn-outline-light btn-lg">
+                        Our Services
                     </a>
                 </div>
             </div>
@@ -735,6 +770,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
     updateFilters();
 });
+
+// Slider Function
+function showProjectSlide(projectId, index) {
+    const card = document.querySelector(`.project-card[data-project-id="${projectId}"]`);
+    const imgs = card.querySelectorAll('.slider-img');
+    const dots = card.querySelectorAll('.dot');
+
+    imgs.forEach((img, i) => {
+        img.style.display = i === index ? 'block' : 'none';
+    });
+
+    dots.forEach((dot, i) => {
+        dot.classList.toggle('active', i === index);
+    });
+}
 </script>
 
 </body>
