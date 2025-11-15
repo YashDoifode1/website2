@@ -376,10 +376,10 @@ require_once __DIR__ . '/includes/header.php';
 
 <!-- ====================== FLOATING BUTTONS ====================== -->
 <div class="floating-buttons">
-    <a href="https://wa.me/919876543210" target="_blank" class="floating-btn whatsapp-btn" title="Chat on WhatsApp">
+    <a href="https://wa.me/919075956483" target="_blank" class="floating-btn whatsapp-btn" title="Chat on WhatsApp">
         <i class="fab fa-whatsapp"></i>
     </a>
-    <a href="tel:+919876543210" class="floating-btn call-btn" title="Call Us">
+    <a href="tel:+919075956483" class="floating-btn call-btn" title="Call Us">
         <i class="fas fa-phone"></i>
     </a>
 </div>

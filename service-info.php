@@ -1,7 +1,8 @@
 <?php
 /**
  * Service Info Page – Grand Jyothi Construction
- * Modern design 100% aligned with blog‑detail / project‑info / projects / services
+ * Modern design aligned with services / projects / blog-detail
+ * Fixed: Image paths, Feather icons, mobile UX
  */
 
 declare(strict_types=1);
@@ -16,7 +17,7 @@ if (empty($slug)) {
 }
 
 /* ---------- Current Service ---------- */
-$sql = "SELECT title, description, icon, category, author, cover_image, created_at
+$sql = "SELECT title, description, icon, category, author, cover_image, icon_image, created_at, slug
         FROM services WHERE slug = ? LIMIT 1";
 $stmt = executeQuery($sql, [$slug]);
 $service = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -48,7 +49,7 @@ $categories = executeQuery(
 $total_services = executeQuery("SELECT COUNT(*) FROM services")->fetchColumn();
 
 $popular_services = executeQuery(
-    "SELECT title, slug, cover_image
+    "SELECT title, slug, cover_image, icon_image
      FROM services
      ORDER BY created_at DESC LIMIT 3"
 )->fetchAll();
@@ -65,9 +66,12 @@ require_once __DIR__ . '/includes/header.php';
     <title><?= $page_title ?></title>
 
     <!-- Bootstrap + Icons + Google Fonts -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- Feather Icons -->
+    <script src="https://unpkg.com/feather-icons"></script>
 
     <style>
         :root{
@@ -79,84 +83,103 @@ require_once __DIR__ . '/includes/header.php';
 
         /* ==== BUTTONS ==== */
         .btn-primary{background:var(--primary-yellow);border-color:var(--primary-yellow);
-            color:var(--charcoal);font-weight:600;padding:10px 25px;border-radius:8px;}
+            color:var(--charcoal);font-weight:600;padding:10px 25px;border-radius:8px;transition:.3s;}
         .btn-primary:hover{background:#e89a1f;border-color:#e89a1f;color:var(--charcoal);}
+        .btn-outline-dark{border:2px solid #ddd;color:var(--charcoal);padding:10px 25px;border-radius:8px;}
+        .btn-outline-dark:hover{background:#f1f1f1;}
 
         /* ==== HERO ==== */
-        .service-banner{height:500px;background:linear-gradient(rgba(26,26,26,.6),rgba(26,26,26,.6)),
-            url('<?= sanitizeOutput($service['cover_image'] ?? 'https://via.placeholder.com/1600x900/1A1A1A/F9A826?text=Service') ?>')
-            center/cover no-repeat;display:flex;align-items:flex-end;padding:60px 0;color:var(--white);position:relative;}
+        .service-banner{
+            height:500px;background:linear-gradient(rgba(26,26,26,.7),rgba(26,26,26,.7)),
+            url('<?= !empty($service['cover_image']) ? '/constructioninnagpur' . sanitizeOutput($service['cover_image']) : 'https://via.placeholder.com/1600x900/1A1A1A/F9A826?text=Service' ?>')
+            center/cover no-repeat;display:flex;align-items:flex-end;padding:60px 0;color:var(--white);position:relative;
+        }
         .service-banner::before{content:'';position:absolute;inset:0;
-            background:linear-gradient(135deg,rgba(249,168,38,.1) 0%,transparent 70%);}
+            background:linear-gradient(135deg,rgba(249,168,38,.15) 0%,transparent 70%);}
         .service-title{font-size:3rem;margin-bottom:20px;line-height:1.2;}
-        .service-meta{display:flex;flex-wrap:wrap;gap:15px;align-items:center;}
+        .service-meta{display:flex;flex-wrap:wrap;gap:15px;align-items:center;font-size:.95rem;}
         .badge-category,.badge-author{background:var(--primary-yellow);color:var(--charcoal);
-            padding:5px 15px;border-radius:20px;font-size:.9rem;font-weight:600;}
+            padding:5px 15px;border-radius:20px;font-weight:600;}
+        .meta-date{color:rgba(255,255,255,.9);}
 
         /* ==== CONTENT ==== */
-        .service-content-section{padding:80px 0;}
-        .service-content{font-size:1.1rem;line-height:1.8;}
+        .service-content-section{padding:80px 0;background:var(--light-gray);}
+        .service-content{font-size:1.1rem;line-height:1.8;color:#444;}
         .service-content h2{font-size:1.8rem;margin:40px 0 20px;padding-bottom:10px;
-            border-bottom:2px solid var(--primary-yellow);}
+            border-bottom:3px solid var(--primary-yellow);display:inline-block;}
+        .service-content p{margin-bottom:1.5rem;}
+        .service-content ul{list-style:disc;margin-left:20px;margin-bottom:1.5rem;}
+        .service-content ul li{margin-bottom:8px;}
+
+        /* ==== ICON DISPLAY ==== */
+        .service-icon-display{
+            width:80px;height:80px;background:var(--primary-yellow);color:var(--charcoal);
+            border-radius:16px;display:flex;align-items:center;justify-content:center;
+            margin:0 auto 25px;font-size:2.5rem;box-shadow:0 6px 15px rgba(249,168,38,.3);
+        }
+        .service-icon-display img{width:50px;height:50px;object-fit:contain;}
 
         /* ==== SIDEBAR ==== */
-        .sidebar{background:var(--light-gray);border-radius:10px;padding:30px;margin-bottom:30px;}
-        .sidebar-title{font-size:1.2rem;margin-bottom:20px;padding-bottom:10px;
+        .sidebar{background:var(--white);border-radius:12px;padding:28px;
+            box-shadow:0 6px 20px rgba(0,0,0,.05);margin-bottom:30px;}
+        .sidebar-title{font-size:1.2rem;margin-bottom:18px;padding-bottom:8px;
             border-bottom:2px solid var(--primary-yellow);display:inline-block;}
-        .search-box{position:relative;margin-bottom:30px;}
-        .search-box input{width:100%;padding:12px 15px;border-radius:5px;border:1px solid #ddd;}
-        .search-box button{position:absolute;right:5px;top:5px;background:var(--primary-yellow);
-            border:none;color:var(--charcoal);padding:7px 15px;border-radius:5px;font-weight:600;}
-        .category-list{list-style:none;padding:0;}
-        .category-list li{padding:10px 0;border-bottom:1px solid #eee;}
-        .category-list li:last-child{border:none;}
+        .search-box{position:relative;margin-bottom:25px;}
+        .search-box input{width:100%;padding:12px 45px 12px 16px;border-radius:50px;border:1px solid #ddd;font-size:.95rem;}
+        .search-box button{position:absolute;right:6px;top:6px;background:var(--primary-yellow);
+            border:none;color:var(--charcoal);width:36px;height:36px;border-radius:50%;
+            display:flex;align-items:center;justify-content:center;font-size:1rem;}
+        .category-list{list-style:none;padding:0;margin:0;}
         .category-list a{display:flex;justify-content:space-between;align-items:center;
-            color:var(--charcoal);text-decoration:none;transition:.3s;}
+            padding:10px 0;color:var(--charcoal);text-decoration:none;border-bottom:1px solid #eee;font-size:.95rem;}
         .category-list a:hover,.category-list a.active{color:var(--primary-yellow);font-weight:600;}
-        .category-count{background:var(--charcoal);color:var(--white);padding:3px 8px;
-            border-radius:10px;font-size:.8rem;}
-        .popular-service{display:flex;margin-bottom:15px;padding-bottom:15px;
+        .category-count{background:var(--charcoal);color:var(--white);padding:2px 8px;
+            border-radius:10px;font-size:.75rem;}
+        .popular-service{display:flex;gap:12px;margin-bottom:18px;padding-bottom:18px;
             border-bottom:1px solid #eee;}
         .popular-service:last-child{margin-bottom:0;padding-bottom:0;border:none;}
-        .popular-service-image{width:70px;height:70px;border-radius:5px;overflow:hidden;
-            margin-right:15px;flex-shrink:0;}
+        .popular-service-image{width:70px;height:70px;border-radius:8px;overflow:hidden;flex-shrink:0;background:#eee;}
         .popular-service-image img{width:100%;height:100%;object-fit:cover;}
-        .popular-service-title{font-size:.9rem;margin-bottom:5px;}
-        .popular-service-title a{color:var(--charcoal);text-decoration:none;transition:.3s;}
+        .popular-service-title a{color:var(--charcoal);font-weight:500;text-decoration:none;font-size:.95rem;line-height:1.3;}
         .popular-service-title a:hover{color:var(--primary-yellow);}
 
         /* ==== SHARE ==== */
-        .social-share{display:flex;align-items:center;gap:10px;margin:40px 0;}
-        .social-icon{width:40px;height:40px;border-radius:50%;background:var(--light-gray);
-            color:var(--charcoal);display:flex;align-items:center;justify-content:center;transition:.3s;}
-        .social-icon:hover{transform:translateY(-3px);}
+        .social-share{display:flex;align-items:center;gap:12px;margin:40px 0;flex-wrap:wrap;}
+        .social-icon{width:42px;height:42px;border-radius:50%;background:var(--light-gray);
+            color:var(--charcoal);display:flex;align-items:center;justify-content:center;font-size:1.1rem;transition:.3s;}
+        .social-icon:hover{transform:translateY(-4px);box-shadow:0 8px 15px rgba(0,0,0,.1);}
         .whatsapp:hover{background:#25d366;color:#fff;}
         .facebook:hover{background:#3b5998;color:#fff;}
         .linkedin:hover{background:#0077b5;color:#fff;}
 
         /* ==== NAVIGATION ==== */
         .service-navigation{display:flex;justify-content:space-between;padding:40px 0;
-            border-top:1px solid #eee;border-bottom:1px solid #eee;margin:40px 0;}
+            border-top:1px solid #ddd;border-bottom:1px solid #ddd;margin:50px 0;}
         .nav-service{max-width:45%;}
         .nav-service a{display:flex;align-items:center;text-decoration:none;color:var(--charcoal);transition:.3s;}
         .nav-service a:hover{color:var(--primary-yellow);}
-        .nav-icon{font-size:1.5rem;margin:0 15px;}
+        .nav-icon{font-size:1.5rem;margin:0 15px;color:var(--primary-yellow);}
 
         /* ==== CTA ==== */
         .cta-section{background:linear-gradient(135deg,var(--charcoal) 0%,#2d2d2d 100%);
             color:var(--white);padding:80px 0;text-align:center;}
-        .cta-section h2{color:var(--white);margin-bottom:1.5rem;}
-        .btn-outline-light{border:2px solid rgba(255,255,255,.3);color:var(--white);
-            padding:12px 30px;border-radius:30px;}
+        .cta-section h2{color:var(--white);margin-bottom:1.5rem;font-size:2.2rem;}
+        .btn-outline-light{border:2px solid rgba(255,255,255,.4);color:var(--white);
+            padding:12px 32px;border-radius:50px;font-weight:600;transition:.3s;}
         .btn-outline-light:hover{background:rgba(255,255,255,.1);border-color:var(--white);}
 
         /* ==== RESPONSIVE ==== */
-        @media (max-width:768px){
+        @media (max-width:992px){
             .service-banner{height:400px;padding:40px 0;}
-            .service-title{font-size:2.2rem;}
-            .service-navigation{flex-direction:column;}
-            .nav-service{max-width:100%;margin-bottom:20px;}
-            .nav-service.next a{flex-direction:row;}
+            .service-title{font-size:2.4rem;}
+            .service-navigation{flex-direction:column;gap:25px;}
+            .nav-service{max-width:100%;}
+            .nav-service.prev a{flex-direction:row;}
+            .nav-service.next a{flex-direction:row-reverse;text-align:right;}
+        }
+        @media (max-width:576px){
+            .service-title{font-size:2rem;}
+            .service-meta{flex-direction:column;align-items:flex-start;gap:10px;}
         }
     </style>
 </head>
@@ -190,36 +213,52 @@ require_once __DIR__ . '/includes/header.php';
 <!-- ====================== MAIN CONTENT ====================== -->
 <section class="service-content-section">
     <div class="container">
-        <div class="row">
+        <div class="row g-5">
 
-            <!-- ==== LEFT COLUMN (Content + Share + Nav) ==== -->
+            <!-- ==== LEFT COLUMN ==== -->
             <div class="col-lg-8">
+
+                <!-- Icon Display -->
+                <div class="text-center mb-5">
+                    <div class="service-icon-display">
+                        <?php if (!empty($service['icon_image'])): ?>
+                            <img src="/constructioninnagpur<?= sanitizeOutput($service['icon_image']) ?>" alt="icon">
+                        <?php else: ?>
+                            <i data-feather="<?= sanitizeOutput($service['icon'] ?? 'tool') ?>"></i>
+                        <?php endif; ?>
+                    </div>
+                </div>
 
                 <!-- Service Content -->
                 <div class="service-content mb-5">
-                    <?= nl2br(sanitizeOutput($service['description'])) ?>
+                    <?= nl2br(htmlspecialchars($service['description'])) ?>
                 </div>
 
-                <!-- ==== SHARE ==== -->
+                <!-- Share -->
                 <div class="social-share">
                     <span class="fw-bold me-2">Share:</span>
-                    <a href="https://wa.me/?text=Check%20this%20service:%20<?= urlencode(currentUrl()) ?>"
-                       target="_blank" class="social-icon whatsapp"><i class="fab fa-whatsapp"></i></a>
+                    <a href="https://wa.me/?text=Check%20out%20this%20service:%20<?= urlencode(currentUrl()) ?>"
+                       target="_blank" class="social-icon whatsapp" title="WhatsApp">
+                        <i class="fab fa-whatsapp"></i>
+                    </a>
                     <a href="https://www.facebook.com/sharer/sharer.php?u=<?= urlencode(currentUrl()) ?>"
-                       target="_blank" class="social-icon facebook"><i class="fab fa-facebook-f"></i></a>
-                    <a href="https://www.linkedin.com/shareArticle?mini=true&url=<?= urlencode(currentUrl()) ?>"
-                      
-                       target="_blank" class="social-icon linkedin"><i class="fab fa-linkedin-in"></i></a>
+                       target="_blank" class="social-icon facebook" title="Facebook">
+                        <i class="fab fa-facebook-f"></i>
+                    </a>
+                    <a href="https://www.linkedin.com/shareArticle?mini=true&url=<?= urlencode(currentUrl()) ?>&title=<?= urlencode($service['title']) ?>"
+                       target="_blank" class="social-icon linkedin" title="LinkedIn">
+                        <i class="fab fa-linkedin-in"></i>
+                    </a>
                 </div>
 
-                <!-- ==== PREV / NEXT ==== -->
+                <!-- Prev / Next -->
                 <div class="service-navigation">
                     <?php if ($prev): ?>
                         <div class="nav-service prev">
                             <a href="service-info.php?slug=<?= $prev['slug'] ?>">
                                 <div class="nav-icon"><i class="fas fa-arrow-left"></i></div>
                                 <div>
-                                    <div class="text-muted small">Previous Service</div>
+                                    <div class="text-muted small">Previous</div>
                                     <div class="nav-service-title"><?= sanitizeOutput($prev['title']) ?></div>
                                 </div>
                             </a>
@@ -229,11 +268,11 @@ require_once __DIR__ . '/includes/header.php';
                     <?php if ($next): ?>
                         <div class="nav-service next">
                             <a href="service-info.php?slug=<?= $next['slug'] ?>">
-                                <div class="nav-icon"><i class="fas fa-arrow-right"></i></div>
                                 <div>
-                                    <div class="text-muted small">Next Service</div>
+                                    <div class="text-muted small">Next</div>
                                     <div class="nav-service-title"><?= sanitizeOutput($next['title']) ?></div>
                                 </div>
+                                <div class="nav-icon"><i class="fas fa-arrow-right"></i></div>
                             </a>
                         </div>
                     <?php endif; ?>
@@ -254,7 +293,7 @@ require_once __DIR__ . '/includes/header.php';
             <!-- ==== RIGHT SIDEBAR ==== -->
             <div class="col-lg-4">
 
-                <!-- 1. SEARCH -->
+                <!-- Search -->
                 <div class="sidebar">
                     <h3 class="sidebar-title">Search Services</h3>
                     <form action="services.php" method="get" class="search-box">
@@ -263,7 +302,7 @@ require_once __DIR__ . '/includes/header.php';
                     </form>
                 </div>
 
-                <!-- 2. CATEGORIES -->
+                <!-- Categories -->
                 <div class="sidebar">
                     <h3 class="sidebar-title">Service Categories</h3>
                     <ul class="category-list">
@@ -285,21 +324,22 @@ require_once __DIR__ . '/includes/header.php';
                     </ul>
                 </div>
 
-                <!-- 3. POPULAR SERVICES -->
+                <!-- Popular Services -->
                 <div class="sidebar">
                     <h3 class="sidebar-title">Popular Services</h3>
-                    <?php foreach ($popular_services as $p):
-                        $thumb = $p['cover_image']
-                            ? sanitizeOutput($p['cover_image'])
-                            : "https://via.placeholder.com/70";
-                    ?>
+                    <?php foreach ($popular_services as $p): ?>
+                        <?php
+                        $thumb = !empty($p['cover_image'])
+                            ? '/constructioninnagpur' . sanitizeOutput($p['cover_image'])
+                            : 'https://via.placeholder.com/70/eee/ccc?text=Service';
+                        ?>
                         <div class="popular-service">
                             <div class="popular-service-image">
                                 <img src="<?= $thumb ?>" alt="<?= sanitizeOutput($p['title']) ?>">
                             </div>
                             <div>
                                 <div class="popular-service-title">
-                                    <a href="service-info.php?slug=<?= $p['slug'] ?>">
+                                    <a href="service-info.php?slug=<?= sanitizeOutput($p['slug']) ?>">
                                         <?= sanitizeOutput($p['title']) ?>
                                     </a>
                                 </div>
@@ -334,13 +374,18 @@ require_once __DIR__ . '/includes/header.php';
 </section>
 
 <?php
-/* Helper for share URLs */
+/* Helper: Current URL */
 function currentUrl(): string {
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
     return $protocol . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
 }
 require_once __DIR__ . '/includes/footer.php';
 ?>
+
+<!-- Initialize Feather Icons -->
+<script>
+    feather.replace();
+</script>
 
 </body>
 </html>

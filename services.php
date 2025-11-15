@@ -2,6 +2,7 @@
 /**
  * services.php – Our Construction Services
  * Sidebar on LEFT | Main content on RIGHT | 100% aligned with theme
+ * FIXED: Correct image paths + Feather Icons
  */
 
 declare(strict_types=1);
@@ -18,7 +19,7 @@ $per_page        = 6;
 $offset          = ($page - 1) * $per_page;
 
 // ---------- 2. Build query ----------
-$sql = "SELECT id, title, description, icon, slug, cover_image
+$sql = "SELECT id, title, description, icon, slug, cover_image, icon_image
         FROM services 
         WHERE 1=1";
 $params = [];
@@ -45,7 +46,7 @@ $params[] = $offset;
 
 $services = executeQuery($sql, $params)->fetchAll();
 
-// ---------- 3. Auto Categories (from first word of title) ----------
+// ---------- 3. Auto Categories ----------
 $categories = executeQuery("
     SELECT SUBSTRING_INDEX(title, ' ', 1) AS category, COUNT(*) AS count
     FROM services
@@ -75,6 +76,9 @@ require_once __DIR__ . '/includes/header.php';
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- FEATHER ICONS -->
+    <script src="https://unpkg.com/feather-icons"></script>
 
     <style>
         :root{
@@ -130,6 +134,7 @@ require_once __DIR__ . '/includes/header.php';
         .service-card:hover{transform:translateY(-8px);box-shadow:0 15px 30px rgba(0,0,0,.12);}
         .service-cover{height:140px;background-size:cover;background-position:center;background-color:#eee;}
         .service-icon{color:var(--primary-yellow);font-size:2.4rem;margin:20px auto 15px;display:flex;justify-content:center;}
+        .service-icon img{width:48px;height:48px;object-fit:contain;border-radius:6px;}
         .service-title{font-size:1.3rem;margin:0 20px 12px;text-align:center;color:var(--charcoal);font-weight:600;}
         .service-desc{color:#555;font-size:.94rem;line-height:1.5;padding:0 20px 25px;text-align:center;flex:1;}
 
@@ -171,7 +176,8 @@ require_once __DIR__ . '/includes/header.php';
         .cta-section{background:linear-gradient(135deg,var(--charcoal) 0%,#2d2d2d 100%);
             color:var(--white);padding:80px 0;text-align:center;}
         .cta-section h2{color:var(--white);margin-bottom:1.5rem;}
-/* ==== PROCESS ==== */
+
+        /* ==== PROCESS ==== */
         .process-grid{
             display:grid;
             grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
@@ -210,6 +216,7 @@ require_once __DIR__ . '/includes/header.php';
             transition:color .3s;
         }
         .area-card:hover .area-icon{color:var(--charcoal);}
+
         /* ==== RESPONSIVE ==== */
         @media (max-width:992px){
             .services-banner{height:400px;padding:40px 0;}
@@ -285,7 +292,8 @@ require_once __DIR__ . '/includes/header.php';
                             <div class="popular-service">
                                 <?php if (!empty($p['cover_image'])): ?>
                                     <div class="popular-service-image">
-                                        <img src="/constructioninnagpur/assets/images/<?= sanitizeOutput($p['cover_image']) ?>" 
+                                        <!-- FIXED: Correct path -->
+                                        <img src="/constructioninnagpur<?= sanitizeOutput($p['cover_image']) ?>" 
                                              alt="<?= sanitizeOutput($p['title']) ?>">
                                     </div>
                                 <?php endif; ?>
@@ -315,78 +323,89 @@ require_once __DIR__ . '/includes/header.php';
                         </div>
                     <?php else: ?>
                         <?php foreach ($services as $s):
-                            $icon  = !empty($s['icon']) ? sanitizeOutput($s['icon']) : 'tools';
+                            $icon  = !empty($s['icon']) ? sanitizeOutput($s['icon']) : 'tool';
                             $title = sanitizeOutput($s['title']);
                             $desc  = sanitizeOutput(substr(strip_tags($s['description']), 0, 120)) . '...';
                             $slug  = !empty($s['slug']) ? sanitizeOutput($s['slug']) : strtolower(str_replace([' ', '&'], ['-', 'and'], $s['title']));
-                            $cover = !empty($s['cover_image']) ? '/constructioninnagpur/assets/images/' . sanitizeOutput($s['cover_image']) : 'https://via.placeholder.com/300x140/eee/ccc?text=Service';
+                            
+                            // FIXED: Correct cover image path
+                            $cover = !empty($s['cover_image']) 
+                                ? '/constructioninnagpur' . sanitizeOutput($s['cover_image']) 
+                                : 'https://via.placeholder.com/300x140/eee/ccc?text=Service';
                         ?>
                             <a href="/constructioninnagpur/service-info.php?slug=<?= urlencode($slug) ?>" class="service-card">
                                 <div class="service-cover" style="background-image:url('<?= $cover ?>');"></div>
-                                <div class="service-icon"><i class="fas fa-<?= $icon ?>"></i></div>
+                                
+                                <!-- FIXED: Icon Image OR Feather Icon -->
+                                <div class="service-icon">
+                                    <?php if (!empty($s['icon_image'])): ?>
+                                        <img src="/constructioninnagpur<?= sanitizeOutput($s['icon_image']) ?>" alt="icon">
+                                    <?php else: ?>
+                                        <i data-feather="<?= $icon ?>"></i>
+                                    <?php endif; ?>
+                                </div>
+
                                 <h3 class="service-title"><?= $title ?></h3>
                                 <p class="service-desc"><?= $desc ?></p>
                             </a>
                         <?php endforeach; ?>
                     <?php endif; ?>
                 </div>
+
                 <!-- Our Process -->
-        <div class="mt-5">
-            <h2 class="section-title text-center">Our Proven Process</h2>
-            <div class="process-grid">
-                <?php
-                $steps = [
-                    ['Consultation','We begin with a detailed consultation to understand your requirements, budget, and timeline.'],
-                    ['Planning & Design','Our architects and engineers create detailed plans and designs that align with your vision.'],
-                    ['Execution','Skilled team begins construction using quality materials and modern techniques.'],
-                    ['Quality Check','Regular inspections ensure the highest standards are maintained throughout.'],
-                    ['Handover','Final walkthrough, documentation, and handover with complete satisfaction.'],
-                    ['After‑Sales Support','Ongoing support and warranty services to ensure long‑term satisfaction.']
-                ];
-                foreach ($steps as $i => $step):
-                ?>
-                    <div class="process-card">
-                        <div class="process-number"><?= $i+1 ?></div>
-                        <h4 class="h5 fw-bold"><?= sanitizeOutput($step[0]) ?></h4>
-                        <p class="small"><?= sanitizeOutput($step[1]) ?></p>
+                <div class="mt-5">
+                    <h2 class="section-title text-center">Our Proven Process</h2>
+                    <div class="process-grid">
+                        <?php
+                        $steps = [
+                            ['Consultation','We begin with a detailed consultation to understand your requirements, budget, and timeline.'],
+                            ['Planning & Design','Our architects and engineers create detailed plans and designs that align with your vision.'],
+                            ['Execution','Skilled team begins construction using quality materials and modern techniques.'],
+                            ['Quality Check','Regular inspections ensure the highest standards are maintained throughout.'],
+                            ['Handover','Final walkthrough, documentation, and handover with complete satisfaction.'],
+                            ['After-Sales Support','Ongoing support and warranty services to ensure long-term satisfaction.']
+                        ];
+                        foreach ($steps as $i => $step):
+                        ?>
+                            <div class="process-card">
+                                <div class="process-number"><?= $i+1 ?></div>
+                                <h4 class="h5 fw-bold"><?= sanitizeOutput($step[0]) ?></h4>
+                                <p class="small"><?= sanitizeOutput($step[1]) ?></p>
+                            </div>
+                        <?php endforeach; ?>
                     </div>
-                <?php endforeach; ?>
-            </div>
-        </div>
+                </div>
 
-        <!-- Service Areas -->
-        <div class="mt-5">
-            <h2 class="section-title text-center">Our Service Areas</h2>
-            <p class="text-center mb-5 lead text-muted">Serving clients across Nagpur and surrounding regions</p>
-            <div class="areas-grid">
-                <?php
-                $areas = [
-                    ['Nagpur City','Core city and surrounding areas'],
-                    ['Dharampeth','Premium residential & commercial zone'],
-                    ['Sadar','Central business district'],
-                    ['Ramdaspeth','High‑end residential area'],
-                    ['Civil Lines','Heritage and government zone'],
-                    ['Sitabuldi','Commercial & market hub'],
-                    ['Wardha Road','Industrial & logistics corridor'],
-                    ['Kamptee','Suburban residential growth'],
-                    ['Hingna','Industrial & manufacturing zone'],
-                    ['Koradi','Emerging residential area'],
-                    ['Manish Nagar','Modern residential locality'],
-                    ['And Surrounding Areas','We serve all nearby regions']
-                ];
-                foreach ($areas as $a):
-                ?>
-                    <div class="area-card">
-                        <div class="area-icon"><i class="fas fa-map-marker-alt"></i></div>
-                        <h4><?= sanitizeOutput($a[0]) ?></h4>
-                        <p><?= sanitizeOutput($a[1]) ?></p>
+                <!-- Service Areas -->
+                <div class="mt-5">
+                    <h2 class="section-title text-center">Our Service Areas</h2>
+                    <p class="text-center mb-5 lead text-muted">Serving clients across Nagpur and surrounding regions</p>
+                    <div class="areas-grid">
+                        <?php
+                        $areas = [
+                            ['Nagpur City','Core city and surrounding areas'],
+                            ['Dharampeth','Premium residential & commercial zone'],
+                            ['Sadar','Central business district'],
+                            ['Ramdaspeth','High-end residential area'],
+                            ['Civil Lines','Heritage and government zone'],
+                            ['Sitabuldi','Commercial & market hub'],
+                            ['Wardha Road','Industrial & logistics corridor'],
+                            ['Kamptee','Suburban residential growth'],
+                            ['Hingna','Industrial & manufacturing zone'],
+                            ['Koradi','Emerging residential area'],
+                            ['Manish Nagar','Modern residential locality'],
+                            ['And Surrounding Areas','We serve all nearby regions']
+                        ];
+                        foreach ($areas as $a):
+                        ?>
+                            <div class="area-card">
+                                <div class="area-icon"><i class="fas fa-map-marker-alt"></i></div>
+                                <h4><?= sanitizeOutput($a[0]) ?></h4>
+                                <p><?= sanitizeOutput($a[1]) ?></p>
+                            </div>
+                        <?php endforeach; ?>
                     </div>
-                <?php endforeach; ?>
-            </div>
-        </div>
-
-    <!-- </div>
-</section> -->
+                </div>
 
                 <!-- Pagination -->
                 <?php if ($total_pages > 1): ?>
@@ -408,7 +427,6 @@ require_once __DIR__ . '/includes/header.php';
                 <?php endif; ?>
 
             </div>
-
         </div>
     </div>
 </main>
@@ -434,6 +452,11 @@ require_once __DIR__ . '/includes/header.php';
 </section>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
+
+<!-- Initialize Feather Icons -->
+<script>
+    feather.replace();
+</script>
 
 </body>
 </html>

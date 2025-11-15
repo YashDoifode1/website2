@@ -1,6 +1,6 @@
 <?php
 /**
- * Admin Services Management (With Image Uploads)
+ * Admin Services Management (With Image Uploads + Live Previews)
  * ------------------------------------------------
  * Works with the exact `services` table you posted:
  *   id, title, description, icon, created_at, slug,
@@ -37,7 +37,6 @@ if ($action === 'delete' && $service_id) {
         $svc = $stmt->fetch();
 
         if ($svc) {
-            // Delete old files (if they exist)
             foreach (['cover_image', 'icon_image'] as $field) {
                 $path = $svc[$field] ?? '';
                 if ($path && file_exists(__DIR__ . '/../' . $path)) {
@@ -66,23 +65,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $category    = trim($_POST['category'] ?? '');
     $author      = trim($_POST['author'] ?? 'Admin');
 
-    // -----------------------------------------------------------------
-    // Auto-generate slug
-    // -----------------------------------------------------------------
     if (empty($slug) && !empty($title)) {
         $slug = strtolower(preg_replace('/[^a-z0-9]+/i', '-', $title));
     }
 
-    // -----------------------------------------------------------------
-    // Ensure upload folder exists
-    // -----------------------------------------------------------------
     if (!is_dir($upload_dir)) {
         mkdir($upload_dir, 0775, true);
     }
 
-    // -----------------------------------------------------------------
-    // Current DB values (only needed for EDIT)
-    // -----------------------------------------------------------------
     $cover_image = $icon_image = '';
     if ($action === 'edit' && $service_id) {
         $stmt = executeQuery("SELECT cover_image, icon_image FROM services WHERE id = ?", [$service_id]);
@@ -93,9 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $cover_image = 'placeholder.jpg';
     }
 
-    // -----------------------------------------------------------------
-    // 2.1 COVER IMAGE UPLOAD
-    // -----------------------------------------------------------------
+    // COVER IMAGE UPLOAD
     if (!empty($_FILES['cover_image']['name'])) {
         $ext   = strtolower(pathinfo($_FILES['cover_image']['name'], PATHINFO_EXTENSION));
         $name  = time() . '_' . preg_replace('/[^a-z0-9\.\-_]/i', '', $_FILES['cover_image']['name']);
@@ -113,9 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // -----------------------------------------------------------------
-    // 2.2 ICON IMAGE UPLOAD
-    // -----------------------------------------------------------------
+    // ICON IMAGE UPLOAD
     if (!empty($_FILES['icon_image']['name'])) {
         $ext   = strtolower(pathinfo($_FILES['icon_image']['name'], PATHINFO_EXTENSION));
         $name  = time() . '_' . preg_replace('/[^a-z0-9\.\-_]/i', '', $_FILES['icon_image']['name']);
@@ -133,16 +119,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // -----------------------------------------------------------------
-    // 2.3 VALIDATE REQUIRED FIELDS
-    // -----------------------------------------------------------------
     if (empty($title) || empty($description)) {
         $error_message = 'Title and description are required.';
     }
 
-    // -----------------------------------------------------------------
-    // 2.4 SAVE TO DB
-    // -----------------------------------------------------------------
     if (empty($error_message)) {
         try {
             if ($action === 'edit' && $service_id) {
@@ -283,7 +263,7 @@ require_once __DIR__ . '/includes/admin_header.php';
             </a>
         </div>
 
-        <form method="POST" action="" enctype="multipart/form-data" class="p-4">
+        <form method="POST" action="" enctype="multipart/form-data" class="p-4" id="serviceForm">
             <div class="form-group mb-3">
                 <label class="form-label">Service Title *</label>
                 <input type="text" name="title" class="form-input" value="<?= $service['title'] ?? '' ?>" required>
@@ -299,31 +279,36 @@ require_once __DIR__ . '/includes/admin_header.php';
                 <textarea name="description" rows="6" class="form-textarea" required><?= $service['description'] ?? '' ?></textarea>
             </div>
 
+            <!-- COVER IMAGE WITH PREVIEW -->
             <div class="form-group mb-3">
                 <label class="form-label">Cover Image</label>
-                <?php if (!empty($service['cover_image']) && $service['cover_image'] !== 'placeholder.jpg'): ?>
-                    <div class="mb-2">
-                        <img src="<?= sanitizeOutput($service['cover_image']) ?>" alt="cover" width="120">
-                    </div>
-                <?php endif; ?>
-                <input type="file" name="cover_image" accept=".jpg,.jpeg,.png,.webp">
+                <div class="image-preview-container mb-2" id="coverPreviewContainer">
+                    <?php if (!empty($service['cover_image']) && $service['cover_image'] !== 'placeholder.jpg'): ?>
+                        <img src="<?= sanitizeOutput($service['cover_image']) ?>" alt="Current cover" class="img-preview">
+                    <?php elseif (!empty($service['cover_image'])): ?>
+                        <img src="/constructioninnagpur/assets/images/placeholder.jpg" alt="Placeholder" class="img-preview">
+                    <?php endif; ?>
+                </div>
+                <input type="file" name="cover_image" accept=".jpg,.jpeg,.png,.webp" class="form-input" id="coverInput">
                 <small class="text-muted">Max 2 MB – jpg, jpeg, png, webp</small>
             </div>
 
+            <!-- ICON IMAGE WITH PREVIEW -->
             <div class="form-group mb-3">
                 <label class="form-label">Icon Image (optional)</label>
-                <?php if (!empty($service['icon_image'])): ?>
-                    <div class="mb-2">
-                        <img src="<?= sanitizeOutput($service['icon_image']) ?>" alt="icon" width="60">
-                    </div>
-                <?php endif; ?>
-                <input type="file" name="icon_image" accept=".jpg,.jpeg,.png,.svg,.webp">
+                <div class="image-preview-container mb-2" id="iconPreviewContainer">
+                    <?php if (!empty($service['icon_image'])): ?>
+                        <img src="<?= sanitizeOutput($service['icon_image']) ?>" alt="Current icon" class="img-preview icon">
+                    <?php endif; ?>
+                </div>
+                <input type="file" name="icon_image" accept=".jpg,.jpeg,.png,.svg,.webp" class="form-input" id="iconInput">
                 <small class="text-muted">Max 1 MB – jpg, png, svg, webp</small>
             </div>
 
             <div class="form-group mb-3">
                 <label class="form-label">Feather Icon Name (fallback)</label>
                 <input type="text" name="icon" class="form-input" value="<?= $service['icon'] ?? 'tool' ?>">
+                <small class="text-muted">e.g., tool, home, settings (<a href="https://feathericons.com" target="_blank">see all</a>)</small>
             </div>
 
             <div class="form-group mb-3">
@@ -344,5 +329,69 @@ require_once __DIR__ . '/includes/admin_header.php';
             </div>
         </form>
     </div>
+
+    <!-- LIVE PREVIEW SCRIPT -->
+    <script>
+        document.getElementById('coverInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const container = document.getElementById('coverPreviewContainer');
+            container.innerHTML = '';
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.className = 'img-preview';
+                    img.style.maxHeight = '140px';
+                    container.appendChild(img);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        document.getElementById('iconInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const container = document.getElementById('iconPreviewContainer');
+            container.innerHTML = '';
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.className = 'img-preview icon';
+                    img.style.maxHeight = '60px';
+                    container.appendChild(img);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    </script>
+
+    <style>
+        .image-preview-container {
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            padding: 8px;
+        }
+        .img-preview {
+            max-width: 100%;
+            max-height: 140px;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .img-preview.icon {
+            max-height: 60px;
+            max-width: 60px;
+        }
+    </style>
+
 <?php endif; ?>
 
+<?php require_once __DIR__ . '/includes/admin_footer.php'; ?>

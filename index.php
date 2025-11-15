@@ -802,7 +802,7 @@ require_once __DIR__ . '/includes/header.php';
                         <a href="<?= $base_path ?>/contact.php?estimate=true" class="btn btn-primary btn-lg">
                             <i class="fas fa-calendar-check me-2"></i>Schedule Free Site Visit
                         </a>
-                        <a href="tel:+919876543210" class="btn btn-outline-primary">
+                        <a href="tel:+919075956483" class="btn btn-outline-primary">
                             <i class="fas fa-phone me-2"></i>Call for Consultation
                         </a>
                     </div>
@@ -844,10 +844,10 @@ require_once __DIR__ . '/includes/header.php';
 
 <!-- ====================== FLOATING BUTTONS ====================== -->
 <div class="floating-buttons">
-    <a href="https://wa.me/919876543210" target="_blank" class="floating-btn whatsapp-btn" title="Chat on WhatsApp">
+    <a href="https://wa.me/+919075956483" target="_blank" class="floating-btn whatsapp-btn" title="Chat on WhatsApp">
         <i class="fab fa-whatsapp"></i>
     </a>
-    <a href="tel:+919876543210" class="floating-btn call-btn" title="Call Us">
+    <a href="tel:++919075956483" class="floating-btn call-btn" title="Call Us">
         <i class="fas fa-phone"></i>
     </a>
 </div>
