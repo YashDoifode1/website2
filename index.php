@@ -1,17 +1,16 @@
 <?php
 /**
- * Home Page - Grand Jyothi Construction
- * Full Package Display (with Accordions) + Estimator
+ * Home Page – Grand Jyothi Construction
+ * 100% compatible with your current DB schema
  */
 
 declare(strict_types=1);
-
 require_once __DIR__ . '/includes/db.php';
-require_once __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/includes/security.php';
 
 $page_title = 'Grand Jyothi Construction | Build Your Dream Home';
 
-// Fetch all active packages
+// ---------- 1. Packages ----------
 $packages = executeQuery("
     SELECT id, title, price_per_sqft, description, features 
     FROM packages 
@@ -19,7 +18,7 @@ $packages = executeQuery("
     ORDER BY display_order ASC, created_at DESC
 ")->fetchAll(PDO::FETCH_ASSOC);
 
-// Fetch package sections (accordions)
+// ---------- 2. Package sections (accordions) ----------
 $sections = executeQuery("
     SELECT package_id, title, content
     FROM package_sections
@@ -27,19 +26,43 @@ $sections = executeQuery("
     ORDER BY display_order ASC
 ")->fetchAll(PDO::FETCH_ASSOC);
 
-// Group sections by package_id
 $package_sections = [];
 foreach ($sections as $s) {
     $package_sections[$s['package_id']][] = $s;
 }
 
-// Fetch testimonials
+// ---------- 3. Testimonials ----------
 $testimonials = executeQuery("
     SELECT t.*, p.title AS project_title 
     FROM testimonials t
     LEFT JOIN projects p ON t.project_id = p.id
     ORDER BY t.created_at DESC LIMIT 6
 ")->fetchAll();
+
+// ---------- 4. Latest 8 Projects (Gallery) ----------
+$featured_projects = executeQuery("
+    SELECT p.title, p.id, p.location, pi.image_path 
+    FROM projects p
+    JOIN project_images pi ON p.id = pi.project_id
+    GROUP BY p.id
+    ORDER BY p.created_at DESC
+    LIMIT 8
+")->fetchAll();
+
+// ---------- 5. Sidebar Data ----------
+$categories = executeQuery(
+    "SELECT SUBSTRING_INDEX(title,' ',1) AS cat, COUNT(*) AS cnt
+     FROM packages WHERE is_active=1 GROUP BY cat ORDER BY cat"
+)->fetchAll();
+
+$total_packages = executeQuery("SELECT COUNT(*) FROM packages WHERE is_active=1")->fetchColumn();
+
+$popular_packages = executeQuery(
+    "SELECT title, price_per_sqft FROM packages
+     WHERE is_active=1 ORDER BY display_order ASC LIMIT 3"
+)->fetchAll();
+
+require_once __DIR__ . '/includes/header.php';
 ?>
 
 <!DOCTYPE html>
@@ -49,236 +72,770 @@ $testimonials = executeQuery("
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= $page_title ?></title>
 
-    <!-- Bootstrap + Fonts + Icons -->
+    <!-- Bootstrap + Icons + Fonts -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- Swiper.js -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
 
     <style>
-        :root {
-            --primary-yellow: #F9A826;
-            --charcoal: #1A1A1A;
-            --light-gray: #f8f9fa;
-            --border-color: #e5e5e5;
+        :root{
+            --primary-yellow:#F9A826;--charcoal:#1A1A1A;--white:#fff;
+            --light-gray:#f8f9fa;--medium-gray:#e9ecef;--dark:#2d2d2d;
         }
-        body {
-            font-family: 'Roboto', sans-serif;
-            color: var(--charcoal);
-            background-color: #fff;
-        }
-        h1, h2, h3, h4 { font-family: 'Poppins', sans-serif; font-weight: 600; }
+        body{font-family:'Roboto',sans-serif;color:var(--charcoal);background:var(--white);line-height:1.6;}
+        h1,h2,h3,h4,h5,h6{font-family:'Poppins',sans-serif;font-weight:600;}
 
-        .btn-primary {
-            background-color: var(--primary-yellow);
-            border: none;
-            color: var(--charcoal);
-            font-weight: 600;
-            border-radius: 8px;
-            padding: 12px 30px;
-            transition: all 0.3s ease;
-        }
-        .btn-primary:hover {
-            background-color: #e89a1f;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(249, 168, 38, 0.3);
-        }
+        .btn-primary{background:var(--primary-yellow);border:none;color:var(--charcoal);
+            font-weight:600;padding:14px 32px;border-radius:8px;transition:all .3s;}
+        .btn-primary:hover{background:#e89a1f;color:var(--charcoal);transform:translateY(-2px);}
+        .btn-outline-light{border:2px solid rgba(255,255,255,.3);color:var(--white);
+            padding:12px 30px;border-radius:30px;transition:all .3s;}
+        .btn-outline-light:hover{background:rgba(255,255,255,.1);border-color:var(--white);}
+        .btn-outline-primary{border:2px solid var(--primary-yellow);color:var(--primary-yellow);
+            padding:10px 25px;border-radius:8px;}
+        .btn-outline-primary:hover{background:var(--primary-yellow);color:var(--charcoal);}
 
-        .btn-outline-primary {
-            border: 2px solid var(--primary-yellow);
-            color: var(--primary-yellow);
-            font-weight: 600;
-            border-radius: 8px;
-            padding: 10px 25px;
-            transition: 0.3s;
+        .hero-banner{
+            height:100vh;min-height:600px;background:linear-gradient(rgba(26,26,26,.7),rgba(26,26,26,.7)),
+            url('https://images.unsplash.com/photo-1541888946425-d81bb19240f5?ixlib=rb-4.0.3&auto=format&fit=crop&w=1770&q=80')
+            center/cover no-repeat;display:flex;align-items:center;text-align:center;color:var(--white);
+            position:relative;overflow:hidden;
         }
-        .btn-outline-primary:hover {
-            background-color: var(--primary-yellow);
-            color: var(--charcoal);
+        .hero-banner::before{
+            content:'';position:absolute;inset:0;
+            background:linear-gradient(135deg,rgba(249,168,38,.15) 0%,transparent 70%);
         }
+        .hero-title{font-size:3.8rem;line-height:1.1;margin-bottom:1rem;}
+        .hero-subtitle{font-size:1.3rem;opacity:.9;max-width:700px;margin:0 auto 2rem;}
 
-        /* Hero */
-        .hero-section {
-            background: linear-gradient(rgba(26,26,26,0.7), rgba(26,26,26,0.7)),
-                        url('https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=1770&q=80') center/cover;
-            color: #fff;
-            text-align: center;
-            padding: 150px 0;
+        .section-padding{padding:90px 0;}
+        .section-padding-sm{padding:70px 0;}
+        .bg-light-alt{background:#f9f9f9;}
+
+        .section-title{
+            font-size:2.2rem;text-align:center;margin-bottom:50px;position:relative;
+            padding-bottom:15px;display:inline-block;left:50%;transform:translateX(-50%);
+        }
+        .section-title::after{
+            content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);
+            width:80px;height:4px;background:var(--primary-yellow);border-radius:2px;
         }
 
-        /* Estimator */
-        .estimator-section { background: var(--light-gray); padding: 80px 0; }
-        .estimator-box {
-            background: #fff;
-            border-radius: 12px;
-            padding: 35px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.06);
-        }
-
-        /* Packages */
-        .packages-section { padding: 80px 0; }
-        .package-card {
-            background: #fff;
-            border-radius: 12px;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.05);
+        /* Enhanced Professional Estimator */
+        .estimator-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            position: relative;
             overflow: hidden;
-            transition: all 0.3s ease;
         }
-        .package-card:hover { transform: translateY(-8px); }
-
-        .package-header {
-            background: var(--charcoal);
-            color: #fff;
-            padding: 25px 20px;
+        .estimator-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(26, 26, 26, 0.85);
+        }
+        .estimator-box{
+            background: var(--white);
+            border-radius: 20px;
+            padding: 50px 40px;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.15);
+            max-width: 700px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .estimator-header {
             text-align: center;
+            margin-bottom: 40px;
         }
-        .package-body { padding: 30px; }
-        .package-price {
+        .estimator-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, var(--primary-yellow), #ffbf00);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
             font-size: 2rem;
-            color: var(--primary-yellow);
+            color: var(--charcoal);
+        }
+        .estimator-title {
+            font-size: 2.2rem;
             font-weight: 700;
+            color: var(--charcoal);
             margin-bottom: 10px;
         }
-        .accordion-button:not(.collapsed) {
-            background: var(--primary-yellow);
+        .estimator-subtitle {
+            color: #666;
+            font-size: 1.1rem;
+        }
+        .form-control, .form-select {
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 14px 18px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-yellow);
+            box-shadow: 0 0 0 0.2rem rgba(249, 168, 38, 0.25);
+        }
+        .addons-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+        }
+        .addon-card {
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: var(--white);
+        }
+        .addon-card:hover, .addon-card.selected {
+            border-color: var(--primary-yellow);
+            background: rgba(249, 168, 38, 0.05);
+            transform: translateY(-2px);
+        }
+        .addon-card.selected {
+            background: rgba(249, 168, 38, 0.1);
+        }
+        .addon-icon {
+            font-size: 1.5rem;
+            color: var(--primary-yellow);
+            margin-bottom: 10px;
+        }
+        .addon-price {
+            font-weight: 600;
+            color: var(--charcoal);
+            margin-top: 5px;
+        }
+        .estimate-result{
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 16px;
+            padding: 30px;
+            margin-top: 30px;
+            text-align: center;
+            display: none;
+            animation: fadeInUp 0.6s ease-out;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .estimate-amount{
+            font-size: 3rem;
+            font-weight: 800;
+            color: var(--primary-yellow);
+            margin: 10px 0;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .cost-breakdown {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 25px;
+            margin: 25px 0;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        .cost-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f1f1f1;
+        }
+        .cost-item:last-child {
+            border-bottom: none;
+            font-weight: 700;
+            font-size: 1.1rem;
             color: var(--charcoal);
         }
-        .accordion-button {
-            font-weight: 600;
+        .disclaimer {
+            font-size: 0.85rem;
+            color: #666;
+            text-align: center;
+            margin-top: 20px;
+            line-height: 1.5;
+        }
+
+        .package-card{
+            background:var(--white);border-radius:16px;overflow:hidden;
+            box-shadow:0 8px 25px rgba(0,0,0,.06);transition:transform .3s,box-shadow .3s;
+            height:100%;display:flex;flex-direction:column;
+        }
+        .package-card:hover{
+            transform:translateY(-10px);box-shadow:0 20px 40px rgba(0,0,0,.12);
+        }
+        .package-header{
+            background:var(--charcoal);color:var(--white);padding:28px 20px;text-align:center;
+        }
+        .package-title{margin:0;font-size:1.6rem;}
+        .package-body{padding:30px;flex:1;display:flex;flex-direction:column;}
+        .package-price{font-size:2.1rem;color:var(--primary-yellow);font-weight:700;margin-bottom:12px;}
+        .package-desc{color:#555;font-size:.95rem;margin-bottom:20px;flex:1;}
+        .accordion-button{font-weight:600;padding:14px 20px;}
+        .accordion-button:not(.collapsed){
+            background:var(--primary-yellow);color:var(--charcoal);box-shadow:none;
+        }
+
+        /* Enhanced Gallery Section */
+        .gallery-section{
+            padding: 90px 0;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        }
+        .gallery-title{
+            margin-bottom: 50px;
+        }
+        .project-gallery-swiper {
+            padding: 30px 10px;
+            border-radius: 20px;
+            overflow: hidden;
+        }
+        .gallery-slide{
+            position: relative;
+            border-radius: 16px;
+            overflow: hidden;
+            height: 450px;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .gallery-slide:hover{
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+        .gallery-slide img{
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: all 0.4s ease;
+        }
+        .gallery-slide:hover img {
+            transform: scale(1.05);
+        }
+        .gallery-overlay{
+            position:absolute;
+            inset:0;
+            background: linear-gradient(transparent 40%, rgba(26,26,26,0.9));
+            display:flex;
+            flex-direction:column;
+            justify-content:flex-end;
+            padding: 35px;
+            color:var(--white);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+        .gallery-slide:hover .gallery-overlay {
+            opacity: 1;
+        }
+        .gallery-overlay h3{
+            font-size:1.5rem;
+            margin:0 0 8px;
+            transform: translateY(20px);
+            transition: transform 0.3s ease;
+        }
+        .gallery-overlay p{
+            font-size:1rem;
+            margin:0;
+            opacity:0;
+            transform: translateY(20px);
+            transition: all 0.3s ease 0.1s;
+        }
+        .gallery-slide:hover .gallery-overlay h3,
+        .gallery-slide:hover .gallery-overlay p {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .swiper-button-next,
+        .swiper-button-prev {
+            background: var(--white);
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+            color: var(--charcoal);
+            transition: all 0.3s ease;
+        }
+        .swiper-button-next:after,
+        .swiper-button-prev:after {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        .swiper-button-next:hover,
+        .swiper-button-prev:hover {
+            background: var(--primary-yellow);
+            transform: scale(1.1);
+        }
+        .swiper-pagination-bullet {
+            background: #ccc;
+            opacity: 1;
+            width: 12px;
+            height: 12px;
+        }
+        .swiper-pagination-bullet-active {
+            background: var(--primary-yellow);
+        }
+
+        .testimonial-card{
+            background:var(--white);border-radius:12px;padding:28px;
+            box-shadow:0 6px 20px rgba(0,0,0,.05);height:100%;transition:transform .3s;
+        }
+        .testimonial-card:hover{transform:translateY(-6px);}
+        .testimonial-text{font-style:italic;color:#555;line-height:1.8;margin-bottom:20px;}
+        .testimonial-author{display:flex;align-items:center;}
+        .testimonial-author img{width:55px;height:55px;border-radius:50%;margin-right:15px;}
+        .testimonial-name{font-weight:600;margin:0;font-size:1.1rem;}
+        .testimonial-project{color:#777;font-size:.9rem;}
+
+        .sidebar{
+            background:var(--light-gray);border-radius:12px;padding:28px;margin-bottom:30px;
+        }
+        .sidebar-title{
+            font-size:1.25rem;margin-bottom:20px;padding-bottom:10px;
+            border-bottom:2px solid var(--primary-yellow);display:inline-block;
+        }
+        .search-box{position:relative;margin-bottom:25px;}
+        .search-box input{
+            width:100%;padding:12px 45px 12px 18px;border-radius:50px;border:1px solid #ddd;
+            font-size:.95rem;
+        }
+        .search-box button{
+            position:absolute;right:8px;top:8px;background:var(--primary-yellow);
+            border:none;color:var(--charcoal);width:36px;height:36px;border-radius:50%;
+            display:flex;align-items:center;justify-content:center;font-size:1rem;
+        }
+        .category-list{list-style:none;padding:0;margin:0;}
+        .category-list a{
+            display:flex;justify-content:space-between;align-items:center;
+            padding:10px 0;color:var(--charcoal);text-decoration:none;
+            border-bottom:1px solid #eee;transition:color .3s;
+        }
+        .category-list a:hover,.category-list a.active{
+            color:var(--primary-yellow);font-weight:600;
+        }
+        .popular-package{
+            display:flex;gap:12px;margin-bottom:18px;padding-bottom:18px;
+            border-bottom:1px solid #eee;
+        }
+        .popular-package:last-child{margin-bottom:0;padding-bottom:0;border:none;}
+        .popular-package-image{
+            width:60px;height:60px;border-radius:8px;overflow:hidden;flex-shrink:0;
+        }
+        .popular-package-image img{width:100%;height:100%;object-fit:cover;}
+        .popular-package-title a{
+            color:var(--charcoal);font-weight:500;text-decoration:none;transition:color .3s;
+        }
+        .popular-package-title a:hover{color:var(--primary-yellow);}
+
+        /* Popular Packages Swiper */
+        .popularPackagesSwiper {
+            overflow: hidden;
+            border-radius: 12px;
+        }
+        .popularPackagesSwiper .swiper-slide {
+            padding: 8px 0;
+        }
+        .popularPackagesSwiper .swiper-pagination-bullet {
+            background: #ccc;
+            opacity: 1;
+        }
+        .popularPackagesSwiper .swiper-pagination-bullet-active {
+            background: var(--primary-yellow);
+        }
+
+        .floating-buttons{
+            position:fixed;bottom:30px;right:30px;z-index:1000;display:flex;flex-direction:column;gap:15px;
+        }
+        .floating-btn{
+            width:60px;height:60px;border-radius:50%;display:flex;
+            align-items:center;justify-content:center;color:var(--white);
+            font-size:1.6rem;box-shadow:0 6px 20px rgba(0,0,0,.2);transition:all .3s;
+        }
+        .floating-btn:hover{transform:translateY(-5px);box-shadow:0 10px 25px rgba(0,0,0,.3);}
+        .whatsapp-btn{background:#25D366;}
+        .call-btn{background:var(--primary-yellow);color:var(--charcoal);}
+
+        .cta-section{
+            background:linear-gradient(135deg,var(--charcoal) 0%,var(--dark) 100%);
+            color:var(--white);padding:90px 0;text-align:center;
+        }
+        .cta-section h2{color:var(--white);margin-bottom:1.5rem;}
+
+        .form-check-input:checked {
+            background-color: var(--primary-yellow);
+            border-color: var(--primary-yellow);
+        }
+
+        @media (max-width:992px){
+            .hero-banner{height:80vh;}
+            .hero-title{font-size:2.8rem;}
+            .section-padding{padding:70px 0;}
+            .gallery-slide{height:350px;}
+            .estimator-box {padding: 40px 30px;}
+        }
+        @media (max-width:576px){
+            .hero-title{font-size:2.3rem;}
+            .hero-subtitle{font-size:1.1rem;}
+            .floating-buttons{bottom:20px;right:20px;gap:12px;}
+            .floating-btn{width:50px;height:50px;font-size:1.3rem;}
+            .gallery-slide{height:280px;}
+            .gallery-overlay{padding:20px;}
+            .estimator-box {padding: 30px 20px;}
+            .estimate-amount {font-size: 2.2rem;}
+            .addons-grid {grid-template-columns: 1fr;}
         }
     </style>
 </head>
 <body>
 
-    <!-- Hero -->
-    <section class="hero-section">
+<!-- ====================== HERO ====================== -->
+<section class="hero-banner">
+    <div class="container position-relative z-3">
+        <h1 class="hero-title">Build Your Dream Home with Confidence</h1>
+        <p class="hero-subtitle">Modern designs. Transparent pricing. Trusted craftsmanship.</p>
+        <div class="d-flex justify-content-center gap-3 flex-wrap">
+            <a href="#packages" class="btn btn-primary btn-lg">View Packages</a>
+            <a href="#estimator" class="btn btn-outline-light btn-lg">Get Estimate</a>
+        </div>
+    </div>
+</section>
+
+<main>
+
+    <!-- ==== GALLERY SLIDESHOW (Latest 8 Projects with Dummy Images) ==== -->
+    <section class="gallery-section">
         <div class="container">
-            <h1>Build Your Dream Home with Confidence</h1>
-            <p>Modern designs. Transparent pricing. Trusted craftsmanship.</p>
-            <a href="#packages" class="btn btn-primary me-3">View Packages</a>
-            <a href="#estimator" class="btn btn-outline-primary">Get Estimate</a>
+            <h2 class="section-title gallery-title">Our Latest Projects</h2>
+            <div class="swiper project-gallery-swiper">
+                <div class="swiper-wrapper">
+                    <?php 
+                    // Dummy project images for slideshow
+                    $dummy_project_images = [
+                        'https://images.unsplash.com/photo-1600585154340-7e0dc5f4d0ad?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
+                        'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
+                        'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
+                        'https://images.unsplash.com/photo-1600585154526-990dced4db0d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
+                        'https://images.unsplash.com/photo-1600607687644-c7171b42498b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
+                        'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
+                        'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
+                        'https://images.unsplash.com/photo-1600566753151-384129cf4e3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80'
+                    ];
+                    
+                    // Use actual project data but with dummy images
+                    foreach ($featured_projects as $index => $proj): 
+                        $dummy_img = $dummy_project_images[$index % count($dummy_project_images)];
+                    ?>
+                    <div class="swiper-slide">
+                        <a href="/constructioninnagpur/project-info.php?id=<?= (int)$proj['id'] ?>" class="gallery-slide">
+                            <img src="<?= $dummy_img ?>" 
+                                 alt="<?= sanitizeOutput($proj['title']) ?>" loading="lazy">
+                            <div class="gallery-overlay">
+                                <h3><?= sanitizeOutput($proj['title']) ?></h3>
+                                <p><?= sanitizeOutput($proj['location']) ?></p>
+                            </div>
+                        </a>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+                <div class="swiper-button-prev"></div>
+                <div class="swiper-button-next"></div>
+                <div class="swiper-pagination"></div>
+            </div>
         </div>
     </section>
 
-    <!-- Estimator -->
-    <section id="estimator" class="estimator-section">
+    <!-- ==== PACKAGES + SIDEBAR ==== -->
+    <section id="packages" class="section-padding">
         <div class="container">
-            <div class="row justify-content-center">
+            <div class="row g-5">
+
+                <!-- MAIN: Packages -->
                 <div class="col-lg-8">
-                    <div class="estimator-box">
-                        <h3 class="text-center mb-4">Quick Cost Estimator</h3>
-                        <div class="row g-3">
+                    <div class="text-center mb-5">
+                        <h2 class="section-title">Our Construction Packages</h2>
+                        <p class="lead">Comprehensive inclusions with full transparency</p>
+                    </div>
+
+                    <div class="row g-4">
+                        <?php foreach ($packages as $pkg): ?>
                             <div class="col-md-6">
-                                <label class="form-label">Square Footage</label>
-                                <input type="number" id="squareFootage" class="form-control" placeholder="e.g. 1500" min="100">
+                                <div class="package-card">
+                                    <div class="package-header">
+                                        <h3 class="package-title"><?= sanitizeOutput($pkg['title']) ?></h3>
+                                    </div>
+                                    <div class="package-body">
+                                        <div class="package-price">₹<?= number_format((float)$pkg['price_per_sqft']) ?>/sq.ft</div>
+                                        <p class="package-desc"><?= sanitizeOutput($pkg['description']) ?></p>
+
+                                        <?php if (!empty($package_sections[$pkg['id']])): ?>
+                                            <div class="accordion" id="accordion<?= $pkg['id'] ?>">
+                                                <?php foreach ($package_sections[$pkg['id']] as $index => $sec): 
+                                                    $collapseId = "collapse{$pkg['id']}_{$index}";
+                                                ?>
+                                                    <div class="accordion-item">
+                                                        <h2 class="accordion-header">
+                                                            <button class="accordion-button <?= $index !== 0 ? 'collapsed' : '' ?>" 
+                                                                    type="button" data-bs-toggle="collapse" 
+                                                                    data-bs-target="#<?= $collapseId ?>">
+                                                                <?= sanitizeOutput($sec['title']) ?>
+                                                            </button>
+                                                        </h2>
+                                                        <div id="<?= $collapseId ?>" 
+                                                             class="accordion-collapse collapse <?= $index === 0 ? 'show' : '' ?>" 
+                                                             data-bs-parent="#accordion<?= $pkg['id'] ?>">
+                                                            <div class="accordion-body">
+                                                                <?= nl2br(sanitizeOutput($sec['content'])) ?>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        <?php endif; ?>
+
+                                        <a href="/constructioninnagpur/packages.php?id=<?= (int)$pkg['id'] ?>" 
+                                           class="btn btn-outline-primary w-100 mt-3">
+                                            View Full Details
+                                        </a>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Package Type</label>
-                                <select id="packageType" class="form-select">
-                                    <option value="">Select Package</option>
-                                    <?php foreach ($packages as $pkg): ?>
-                                        <option value="<?= (float)$pkg['price_per_sqft'] ?>" 
-                                                data-name="<?= sanitizeOutput($pkg['title']) ?>">
-                                            <?= sanitizeOutput($pkg['title']) ?> 
-                                            (₹<?= number_format((float)$pkg['price_per_sqft']) ?>/sq.ft)
-                                        </option>
+                        <?php endforeach; ?>
+                    </div>
+
+                    <div class="text-center mt-5">
+                        <a href="/constructioninnagpur/packages.php" class="btn btn-primary btn-lg">
+                            View All Packages
+                        </a>
+                    </div>
+                </div>
+
+                <!-- ASIDE: Sidebar -->
+                <aside class="col-lg-4">
+                    <div class="sticky-top" style="top:2rem;">
+
+                        <!-- SEARCH -->
+                        <div class="sidebar">
+                            <h3 class="sidebar-title">Search Packages</h3>
+                            <form action="/constructioninnagpur/packages.php" method="get" class="search-box">
+                                <input type="text" name="search" placeholder="Search packages..." value="<?= sanitizeOutput($_GET['search'] ?? '') ?>">
+                                <button type="submit">Search</button>
+                            </form>
+                        </div>
+
+                        <!-- CATEGORIES -->
+                        <div class="sidebar">
+                            <h3 class="sidebar-title">Categories</h3>
+                            <ul class="category-list">
+                                <li><a href="/constructioninnagpur/packages.php" class="<?= empty($_GET['category']) ? 'active' : '' ?>">
+                                    <span>All Packages</span>
+                                    <span class="badge bg-dark text-white"><?= $total_packages ?></span>
+                                </a></li>
+                                <?php foreach ($categories as $c): ?>
+                                    <li><a href="/constructioninnagpur/packages.php?category=<?= urlencode($c['cat']) ?>"
+                                           class="<?= ($_GET['category'] ?? '') === $c['cat'] ? 'active' : '' ?>">
+                                        <span><?= ucfirst(sanitizeOutput($c['cat'])) ?></span>
+                                        <span class="badge bg-dark text-white"><?= $c['cnt'] ?></span>
+                                    </a></li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </div>
+
+                        <!-- POPULAR PACKAGES WITH AUTO-SLIDESHOW -->
+                        <div class="sidebar">
+                            <h3 class="sidebar-title d-flex justify-content-between align-items-center">
+                                Popular Packages
+                                <span class="badge bg-primary rounded-pill">New</span>
+                            </h3>
+                            <div class="swiper popularPackagesSwiper">
+                                <div class="swiper-wrapper">
+                                    <?php 
+                                    $dummy_images = [
+                                        'https://images.unsplash.com/photo-1581093458791-9d6e0b2a3b5a?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+                                        'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+                                        'https://images.unsplash.com/photo-1613490493576-7fde63acd811?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80'
+                                    ];
+                                    foreach ($popular_packages as $index => $p): 
+                                        $dummy_img = $dummy_images[$index % 3];
+                                    ?>
+                                        <div class="swiper-slide">
+                                            <div class="popular-package">
+                                                <div class="popular-package-image">
+                                                    <img src="<?= $dummy_img ?>" alt="<?= sanitizeOutput($p['title']) ?>" loading="lazy">
+                                                </div>
+                                                <div class="flex-grow-1">
+                                                    <div class="popular-package-title">
+                                                        <a href="/constructioninnagpur/select-plan.php?plan=<?= urlencode($p['title']) ?>">
+                                                            <?= sanitizeOutput($p['title']) ?>
+                                                        </a>
+                                                    </div>
+                                                    <small class="text-muted d-block">
+                                                        <?= $p['price_per_sqft'] > 0 ? '₹'.number_format((float)$p['price_per_sqft']).'/sq.ft' : 'Custom Quote' ?>
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
                                     <?php endforeach; ?>
-                                </select>
+                                </div>
+                                <div class="swiper-pagination mt-2"></div>
                             </div>
                         </div>
-                        <button class="btn btn-primary w-100 mt-3" onclick="calculateEstimate()">Calculate</button>
-                        <div class="text-center mt-4" id="estimateResult" style="display:none;">
-                            <h5>Estimated Cost:</h5>
-                            <h3 id="estimateAmount" class="fw-bold">₹0</h3>
-                            <small id="packageName" class="text-muted d-block"></small>
+
+                    </div>
+                </aside>
+
+            </div>
+        </div>
+    </section>
+ <!-- ==== ENHANCED PROFESSIONAL ESTIMATOR ==== -->
+    <section id="estimator" class="section-padding estimator-section">
+        <div class="container">
+            <div class="estimator-box">
+                <div class="estimator-header">
+                    <div class="estimator-icon">
+                        <i class="fas fa-calculator"></i>
+                    </div>
+                    <h3 class="estimator-title">Professional Cost Estimator</h3>
+                    <p class="estimator-subtitle">Get an accurate construction cost breakdown in real-time</p>
+                </div>
+
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Built-up Area (sq.ft)</label>
+                        <input type="number" id="squareFootage" class="form-control" placeholder="e.g. 1500" min="500" value="1500">
+                        <small class="text-muted">Minimum 500 sq.ft</small>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Construction Package</label>
+                        <select id="packageType" class="form-select">
+                            <option value="">Select Package</option>
+                            <?php foreach ($packages as $pkg): ?>
+                                <option value="<?= (float)$pkg['price_per_sqft'] ?>" 
+                                        data-name="<?= sanitizeOutput($pkg['title']) ?>">
+                                    <?= sanitizeOutput($pkg['title']) ?> 
+                                    (₹<?= number_format((float)$pkg['price_per_sqft']) ?>/sq.ft)
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <label class="form-label fw-semibold mb-3">Premium Add-ons</label>
+                    <div class="addons-grid">
+                        <div class="addon-card" data-value="150000" data-name="Solar Panels">
+                            <div class="addon-icon">
+                                <i class="fas fa-solar-panel"></i>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="addSolar" value="150000">
+                                <label class="form-check-label fw-semibold" for="addSolar">Solar Panels</label>
+                            </div>
+                            <div class="addon-price">+₹1,50,000</div>
                         </div>
+                        <div class="addon-card" data-value="80000" data-name="Landscaping">
+                            <div class="addon-icon">
+                                <i class="fas fa-tree"></i>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="addGarden" value="80000">
+                                <label class="form-check-label fw-semibold" for="addGarden">Landscaping</label>
+                            </div>
+                            <div class="addon-price">+₹80,000</div>
+                        </div>
+                        <div class="addon-card" data-value="120000" data-name="Smart Home">
+                            <div class="addon-icon">
+                                <i class="fas fa-home"></i>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="addSmart" value="120000">
+                                <label class="form-check-label fw-semibold" for="addSmart">Smart Home</label>
+                            </div>
+                            <div class="addon-price">+₹1,20,000</div>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary w-100 mt-4 py-3 fw-bold fs-5" onclick="calculateEstimate()">
+                    <i class="fas fa-calculator me-2"></i>Calculate Detailed Estimate
+                </button>
+
+                <!-- Enhanced Professional Result -->
+                <div class="estimate-result mt-4" id="estimateResult" style="display:none;">
+                    <div class="text-center mb-4">
+                        <h4 class="mb-2">Your Construction Estimate</h4>
+                        <div class="estimate-amount" id="estimateAmount">₹0</div>
+                        <div class="text-success fw-bold fs-6" id="packageName"></div>
+                    </div>
+
+                    <div class="cost-breakdown">
+                        <h6 class="fw-bold mb-3 text-center">Cost Breakdown</h6>
+                        <div class="cost-item">
+                            <span>Base Construction Cost</span>
+                            <span class="fw-semibold" id="baseCost">₹0</span>
+                        </div>
+                        <div class="cost-item">
+                            <span>Selected Add-ons</span>
+                            <span class="fw-semibold" id="addonCost">₹0</span>
+                        </div>
+                        <div class="cost-item">
+                            <span>GST (18%)</span>
+                            <span class="fw-semibold" id="gstCost">₹0</span>
+                        </div>
+                        <div class="cost-item">
+                            <span class="text-primary fw-bold">Total Estimated Cost</span>
+                            <span class="text-primary fw-bold" id="totalCost">₹0</span>
+                        </div>
+                    </div>
+
+                    <div class="disclaimer">
+                        <i class="fas fa-info-circle me-1"></i>
+                        <strong>Note:</strong> This is a preliminary estimate. Final cost may vary ±10% based on site conditions, material availability, and design modifications. Contact us for a detailed site assessment.
+                    </div>
+
+                    <div class="d-grid gap-2 mt-4">
+                        <a href="/constructioninnagpur/contact.php?estimate=true" class="btn btn-primary btn-lg">
+                            <i class="fas fa-calendar-check me-2"></i>Schedule Free Site Visit
+                        </a>
+                        <a href="tel:+919876543210" class="btn btn-outline-primary">
+                            <i class="fas fa-phone me-2"></i>Call for Consultation
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Packages -->
-    <section id="packages" class="packages-section">
+   
+    <!-- ==== TESTIMONIALS ==== -->
+    <section class="section-padding bg-light-alt">
         <div class="container">
             <div class="text-center mb-5">
-                <h2>Our Construction Packages</h2>
-                <p class="lead">Comprehensive inclusions with full transparency</p>
-            </div>
-            <div class="row g-4">
-                <?php foreach ($packages as $pkg): ?>
-                    <div class="col-md-6">
-                        <div class="package-card">
-                            <div class="package-header">
-                                <h3><?= sanitizeOutput($pkg['title']) ?></h3>
-                            </div>
-                            <div class="package-body">
-                                <div class="package-price">₹<?= number_format((float)$pkg['price_per_sqft']) ?>/sq.ft</div>
-                                <p><?= sanitizeOutput($pkg['description']) ?></p>
-
-                                <!-- Accordion -->
-                                <?php if (!empty($package_sections[$pkg['id']])): ?>
-                                    <div class="accordion" id="accordion<?= $pkg['id'] ?>">
-                                        <?php foreach ($package_sections[$pkg['id']] as $index => $sec): 
-                                            $collapseId = "collapse{$pkg['id']}_{$index}";
-                                        ?>
-                                            <div class="accordion-item">
-                                                <h2 class="accordion-header" id="heading<?= $collapseId ?>">
-                                                    <button class="accordion-button <?= $index !== 0 ? 'collapsed' : '' ?>" 
-                                                            type="button" data-bs-toggle="collapse" 
-                                                            data-bs-target="#<?= $collapseId ?>" 
-                                                            aria-expanded="<?= $index === 0 ? 'true' : 'false' ?>" 
-                                                            aria-controls="<?= $collapseId ?>">
-                                                        <?= sanitizeOutput($sec['title']) ?>
-                                                    </button>
-                                                </h2>
-                                                <div id="<?= $collapseId ?>" 
-                                                     class="accordion-collapse collapse <?= $index === 0 ? 'show' : '' ?>" 
-                                                     aria-labelledby="heading<?= $collapseId ?>" 
-                                                     data-bs-parent="#accordion<?= $pkg['id'] ?>">
-                                                    <div class="accordion-body">
-                                                        <?= $sec['content'] ?>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        <?php endforeach; ?>
-                                    </div>
-                                <?php endif; ?>
-
-                                <a href="packages.php?id=<?= (int)$pkg['id'] ?>" class="btn btn-outline-primary w-100 mt-3">
-                                    View Full Details
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-
-            <div class="text-center mt-5">
-                <a href="packages.php" class="btn btn-primary">View All Packages</a>
-            </div>
-        </div>
-    </section>
-
-    <!-- Testimonials -->
-    <section class="py-5" style="background: var(--light-gray);">
-        <div class="container">
-            <div class="text-center mb-5">
-                <h2>What Our Clients Say</h2>
+                <h2 class="section-title">What Our Clients Say</h2>
                 <p class="lead">Trusted by hundreds of happy homeowners</p>
             </div>
             <div class="row g-4">
                 <?php foreach ($testimonials as $t): ?>
-                    <div class="col-md-4">
-                        <div class="p-4 bg-white rounded shadow-sm h-100">
-                            <p class="fst-italic">"<?= sanitizeOutput($t['text']) ?>"</p>
-                            <div class="d-flex align-items-center mt-3">
+                    <div class="col-md-6 col-lg-4">
+                        <div class="testimonial-card">
+                            <p class="testimonial-text">"<?= sanitizeOutput($t['text']) ?>"</p>
+                            <div class="testimonial-author">
                                 <img src="https://randomuser.me/api/portraits/men/<?= rand(1,99) ?>.jpg" 
-                                     alt="<?= sanitizeOutput($t['client_name']) ?>" 
-                                     class="rounded-circle me-3" width="50">
+                                     alt="<?= sanitizeOutput($t['client_name']) ?>">
                                 <div>
-                                    <h6 class="mb-0"><?= sanitizeOutput($t['client_name']) ?></h6>
+                                    <h6 class="testimonial-name"><?= sanitizeOutput($t['client_name']) ?></h6>
                                     <?php if ($t['project_title']): ?>
-                                        <small class="text-muted"><?= sanitizeOutput($t['project_title']) ?></small>
+                                        <small class="testimonial-project"><?= sanitizeOutput($t['project_title']) ?></small>
                                     <?php endif; ?>
                                 </div>
                             </div>
@@ -289,26 +846,128 @@ $testimonials = executeQuery("
         </div>
     </section>
 
-    <?php require_once __DIR__ . '/includes/footer.php'; ?>
+</main>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        function calculateEstimate() {
-            const sqft = parseFloat(document.getElementById('squareFootage').value);
-            const select = document.getElementById('packageType');
-            const rate = parseFloat(select.value);
-            const pkgName = select.options[select.selectedIndex]?.dataset.name || '';
+<!-- ====================== FLOATING BUTTONS ====================== -->
+<div class="floating-buttons">
+    <a href="https://wa.me/919876543210" target="_blank" class="floating-btn whatsapp-btn" title="Chat on WhatsApp">
+        <i class="fab fa-whatsapp"></i>
+    </a>
+    <a href="tel:+919876543210" class="floating-btn call-btn" title="Call Us">
+        <i class="fas fa-phone"></i>
+    </a>
+</div>
 
-            if (!sqft || sqft < 100 || !rate) {
-                alert('Please enter at least 100 sq.ft and select a package.');
-                return;
-            }
+<!-- ====================== CTA ====================== -->
+<section class="cta-section">
+    <div class="container">
+        <div class="row justify-content-center text-center">
+            <div class="col-lg-8">
+                <h2 class="display-5 fw-bold mb-4">Ready to Build Your Dream Home?</h2>
+                <p class="lead mb-4">Let's discuss your vision. Get a free consultation today.</p>
+                <div class="d-flex justify-content-center gap-3 flex-wrap">
+                    <a href="/constructioninnagpur/contact.php" class="btn btn-primary btn-lg">
+                        Contact Us
+                    </a>
+                    <a href="/constructioninnagpur/projects.php" class="btn btn-outline-light btn-lg">
+                        View All Projects
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
 
-            const estimate = sqft * rate;
-            document.getElementById('estimateAmount').textContent = '₹' + estimate.toLocaleString('en-IN');
-            document.getElementById('packageName').textContent = pkgName ? '(' + pkgName + ')' : '';
-            document.getElementById('estimateResult').style.display = 'block';
+<?php require_once __DIR__ . '/includes/footer.php'; ?>
+
+<!-- Swiper JS -->
+<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+<script>
+    // Enhanced Gallery Swiper
+    const swiper = new Swiper('.project-gallery-swiper', {
+        loop: true,
+        autoplay: { delay: 5000, disableOnInteraction: false },
+        navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' },
+        pagination: { el: '.swiper-pagination', clickable: true },
+        spaceBetween: 30,
+        breakpoints: {
+            320: { slidesPerView: 1 },
+            640: { slidesPerView: 1 },
+            768: { slidesPerView: 2 },
+            1024: { slidesPerView: 3 }
         }
-    </script>
+    });
+
+    // Popular Packages Auto-Slideshow
+    const popularSwiper = new Swiper('.popularPackagesSwiper', {
+        loop: true,
+        autoplay: { delay: 3000, disableOnInteraction: false },
+        pagination: { el: '.popularPackagesSwiper .swiper-pagination', clickable: true },
+        effect: 'fade',
+        fadeEffect: { crossFade: true },
+        speed: 800
+    });
+
+    // Enhanced Professional Estimate Calculator
+    function calculateEstimate() {
+        const sqft = parseFloat(document.getElementById('squareFootage').value) || 0;
+        const select = document.getElementById('packageType');
+        const rate = parseFloat(select.value) || 0;
+        const pkgName = select.options[select.selectedIndex]?.dataset.name || '';
+
+        const addons = Array.from(document.querySelectorAll('#addSolar, #addGarden, #addSmart'))
+            .filter(cb => cb.checked)
+            .reduce((sum, cb) => sum + parseFloat(cb.value), 0);
+
+        if (sqft < 500) {
+            alert('Please enter at least 500 sq.ft');
+            return;
+        }
+        if (!rate) {
+            alert('Please select a package');
+            return;
+        }
+
+        const base = sqft * rate;
+        const subtotal = base + addons;
+        const gst = subtotal * 0.18;
+        const total = subtotal + gst;
+
+        document.getElementById('baseCost').textContent = '₹' + base.toLocaleString('en-IN');
+        document.getElementById('addonCost').textContent = '₹' + addons.toLocaleString('en-IN');
+        document.getElementById('gstCost').textContent = '₹' + gst.toLocaleString('en-IN');
+        document.getElementById('totalCost').textContent = '₹' + total.toLocaleString('en-IN');
+        document.getElementById('estimateAmount').textContent = '₹' + total.toLocaleString('en-IN');
+        document.getElementById('packageName').textContent = pkgName ? `(${pkgName})` : '';
+        document.getElementById('estimateResult').style.display = 'block';
+        
+        // Scroll to result
+        document.getElementById('estimateResult').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // Addon card click handlers
+    document.querySelectorAll('.addon-card').forEach(card => {
+        card.addEventListener('click', function() {
+            const checkbox = this.querySelector('input[type="checkbox"]');
+            checkbox.checked = !checkbox.checked;
+            this.classList.toggle('selected', checkbox.checked);
+            calculateEstimate();
+        });
+    });
+
+    // Auto-calculate on input change
+    document.getElementById('squareFootage').addEventListener('input', calculateEstimate);
+    document.getElementById('packageType').addEventListener('change', calculateEstimate);
+    document.querySelectorAll('#addSolar, #addGarden, #addSmart').forEach(cb => {
+        cb.addEventListener('change', function() {
+            const card = this.closest('.addon-card');
+            if (card) {
+                card.classList.toggle('selected', this.checked);
+            }
+            calculateEstimate();
+        });
+    });
+</script>
+
 </body>
 </html>

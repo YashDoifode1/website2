@@ -53,7 +53,7 @@ $popular_packages = array_slice($packages, 0, 3);
 $prev = $next = null;
 if (!empty($packages)) {
     $ids = array_column($packages, 'id');
-    $currentPos = 0; // We show all, but let’s assume first is current for demo
+    $currentPos = 0;
     $prevId = $ids[$currentPos - 1] ?? null;
     $nextId = $ids[$currentPos + 1] ?? null;
 
@@ -95,6 +95,9 @@ require_once __DIR__ . '/includes/header.php';
         .btn-outline-light{border:2px solid rgba(255,255,255,.3);color:var(--white);
             padding:12px 30px;border-radius:30px;}
         .btn-outline-light:hover{background:rgba(255,255,255,.1);border-color:var(--white);}
+        .btn-comparison{background:var(--charcoal);color:var(--white);border:2px solid var(--charcoal);
+            padding:12px 30px;font-weight:600;border-radius:8px;transition:all 0.3s ease;}
+        .btn-comparison:hover{background:var(--primary-yellow);color:var(--charcoal);border-color:var(--primary-yellow);}
 
         /* ==== HERO ==== */
         .packages-banner{height:500px;background:linear-gradient(rgba(26,26,26,.6),rgba(26,26,26,.6)),
@@ -135,9 +138,6 @@ require_once __DIR__ . '/includes/header.php';
         .accordion-body{font-size:.95rem;color:#555;line-height:1.5;padding:15px;}
 
         /* ==== COMPARISON ==== */
-        .comparison-toggle{background:var(--white);border-radius:50px;padding:10px 20px;
-            display:inline-flex;align-items:center;margin-top:20px;box-shadow:0 3px 10px rgba(0,0,0,.1);}
-        .comparison-toggle span{margin-right:10px;font-weight:500;}
         .comparison-section{padding:60px 0;background:var(--white);display:none;}
         .comparison-table{width:100%;border-collapse:collapse;margin-top:20px;}
         .comparison-table th{background:var(--charcoal);color:var(--white);padding:15px;
@@ -196,6 +196,9 @@ require_once __DIR__ . '/includes/header.php';
             color:var(--white);padding:80px 0;text-align:center;}
         .cta-section h2{color:var(--white);margin-bottom:1.5rem;}
 
+        /* ==== COMPARISON BUTTON ==== */
+        .comparison-button-container{text-align:center;margin:50px 0 30px 0;}
+        
         /* ==== RESPONSIVE ==== */
         @media (max-width:768px){
             .packages-banner{height:400px;padding:40px 0;}
@@ -203,6 +206,28 @@ require_once __DIR__ . '/includes/header.php';
             .packages-grid{grid-template-columns:1fr;}
             .package-navigation{flex-direction:column;}
             .nav-package{max-width:100%;margin-bottom:20px;}
+        }
+
+        /* ==== PACKAGE ITEMS STYLING ==== */
+        .package-items-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .package-items-list li {
+            padding: 5px 0;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+        }
+        .package-items-list li:last-child {
+            border-bottom: none;
+        }
+        .package-items-list li:before {
+            content: "•";
+            color: var(--primary-yellow);
+            font-weight: bold;
+            margin-right: 10px;
         }
     </style>
 </head>
@@ -219,12 +244,6 @@ require_once __DIR__ . '/includes/header.php';
         </nav>
         <h1 class="banner-title">Construction Packages</h1>
         <p class="banner-subtitle">Choose the perfect package for your dream home. Transparent pricing, quality materials, and expert craftsmanship.</p>
-        <div class="comparison-toggle">
-            <span>Compare Packages</span>
-            <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" id="comparisonToggle">
-            </div>
-        </div>
     </div>
 </section>
 
@@ -233,7 +252,7 @@ require_once __DIR__ . '/includes/header.php';
     <div class="container">
         <div class="row">
 
-            <!-- ==== LEFT: Packages + Comparison ==== -->
+            <!-- ==== LEFT: Packages ==== -->
             <div class="col-lg-8">
 
                 <?php if (empty($packages)): ?>
@@ -265,6 +284,22 @@ require_once __DIR__ . '/includes/header.php';
                                             <?php foreach ($packageSections[$p['id']] as $i => $s):
                                                 $collapseId = "collapse{$p['id']}_{$i}";
                                                 $headingId  = "heading{$p['id']}_{$i}";
+                                                
+                                                // Process content with <br> tags for proper display
+                                                $content = $s['content'];
+                                                // If content contains <br> tags, convert to list format
+                                                if (strpos($content, '<br>') !== false) {
+                                                    $items = array_filter(array_map('trim', explode('<br>', $content)));
+                                                    $formattedContent = '<ul class="package-items-list">';
+                                                    foreach ($items as $item) {
+                                                        if (!empty($item)) {
+                                                            $formattedContent .= '<li>' . sanitizeOutput($item) . '</li>';
+                                                        }
+                                                    }
+                                                    $formattedContent .= '</ul>';
+                                                } else {
+                                                    $formattedContent = nl2br(sanitizeOutput($content));
+                                                }
                                             ?>
                                                 <div class="accordion-item mb-2">
                                                     <h2 class="accordion-header" id="<?= $headingId ?>">
@@ -279,7 +314,7 @@ require_once __DIR__ . '/includes/header.php';
                                                     <div id="<?= $collapseId ?>" class="accordion-collapse collapse <?= $i===0?'show':'' ?>"
                                                          aria-labelledby="<?= $headingId ?>" data-bs-parent="#accordion<?= $p['id'] ?>">
                                                         <div class="accordion-body">
-                                                            <?= nl2br(sanitizeOutput($s['content'])) ?>
+                                                            <?= $formattedContent ?>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -300,42 +335,14 @@ require_once __DIR__ . '/includes/header.php';
                     </div>
                 <?php endif; ?>
 
-                <!-- Comparison Table -->
-                <div class="comparison-section mt-5" id="comparisonSection">
-                    <h2 class="section-title text-center">Package Comparison</h2>
-                    <div class="table-responsive">
-                        <table class="comparison-table">
-                            <thead>
-                                <tr>
-                                    <th class="feature-name">Features</th>
-                                    <?php foreach ($packages as $p): ?>
-                                        <th><?= sanitizeOutput($p['title']) ?></th>
-                                    <?php endforeach; ?>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($uniqueFeatures as $f):
-                                    if (empty(trim($f))) continue;
-                                ?>
-                                    <tr>
-                                        <td class="feature-name"><?= sanitizeOutput(trim($f)) ?></td>
-                                        <?php foreach ($packages as $p):
-                                            $has = in_array(trim($f), array_map('trim', explode('|', $p['features'] ?? '')));
-                                        ?>
-                                            <td>
-                                                <?php if ($has): ?>
-                                                    <i class="fas fa-check check-mark"></i>
-                                                <?php else: ?>
-                                                    <i class="fas fa-times cross-mark"></i>
-                                                <?php endif; ?>
-                                            </td>
-                                        <?php endforeach; ?>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
+                <!-- Show Comparison Button -->
+                <?php if (!empty($packages) && count($packages) > 1): ?>
+                    <div class="comparison-button-container">
+                        <button class="btn btn-comparison btn-lg" id="showComparisonBtn">
+                            <i class="fas fa-chart-bar me-2"></i>Show Package Comparison
+                        </button>
                     </div>
-                </div>
+                <?php endif; ?>
 
                 <!-- Share -->
                 <div class="social-share">
@@ -431,6 +438,43 @@ require_once __DIR__ . '/includes/header.php';
 
             </div>
         </div>
+
+        <!-- ==== COMPARISON TABLE (OUTSIDE COLUMNS) ==== -->
+        <div class="comparison-section mt-5" id="comparisonSection">
+            <h2 class="section-title text-center">Package Comparison</h2>
+            <div class="table-responsive">
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th class="feature-name">Features</th>
+                            <?php foreach ($packages as $p): ?>
+                                <th><?= sanitizeOutput($p['title']) ?></th>
+                            <?php endforeach; ?>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($uniqueFeatures as $f):
+                            if (empty(trim($f))) continue;
+                        ?>
+                            <tr>
+                                <td class="feature-name"><?= sanitizeOutput(trim($f)) ?></td>
+                                <?php foreach ($packages as $p):
+                                    $has = in_array(trim($f), array_map('trim', explode('|', $p['features'] ?? '')));
+                                ?>
+                                    <td>
+                                        <?php if ($has): ?>
+                                            <i class="fas fa-check check-mark"></i>
+                                        <?php else: ?>
+                                            <i class="fas fa-times cross-mark"></i>
+                                        <?php endif; ?>
+                                    </td>
+                                <?php endforeach; ?>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 </section>
 
@@ -458,11 +502,43 @@ function currentUrl(): string {
 require_once __DIR__ . '/includes/footer.php';
 ?>
 
+<!-- Bootstrap JS (Required for form-switch and smooth scroll) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Comparison Button Script -->
 <script>
-document.getElementById('comparisonToggle').addEventListener('change', function () {
-    const sec = document.getElementById('comparisonSection');
-    sec.style.display = this.checked ? 'block' : 'none';
-    if (this.checked) setTimeout(() => sec.scrollIntoView({behavior:'smooth'}), 100);
+document.addEventListener('DOMContentLoaded', function() {
+    const showComparisonBtn = document.getElementById('showComparisonBtn');
+    const comparisonSection = document.getElementById('comparisonSection');
+
+    if (showComparisonBtn && comparisonSection) {
+        // Initially hide the comparison section
+        comparisonSection.style.display = 'none';
+
+        showComparisonBtn.addEventListener('click', function() {
+            if (comparisonSection.style.display === 'none') {
+                // Show comparison section
+                comparisonSection.style.display = 'block';
+                
+                // Smooth scroll to comparison section
+                setTimeout(function() {
+                    comparisonSection.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'start' 
+                    });
+                }, 100);
+                
+                // Change button text
+                showComparisonBtn.innerHTML = '<i class="fas fa-times me-2"></i>Hide Comparison';
+            } else {
+                // Hide comparison section
+                comparisonSection.style.display = 'none';
+                
+                // Change button text back
+                showComparisonBtn.innerHTML = '<i class="fas fa-chart-bar me-2"></i>Show Package Comparison';
+            }
+        });
+    }
 });
 </script>
 

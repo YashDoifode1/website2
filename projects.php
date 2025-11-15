@@ -624,11 +624,11 @@ require_once __DIR__ . '/includes/header.php';
                 <div class="sidebar">
                     <h3 class="sidebar-title">Popular Projects</h3>
                     <?php foreach ($popular_projects as $p): 
-                        $thumb = $p['thumbnail'] ? "/constructioninnagpur/assets/images/projects/{$p['thumbnail']}" : "https://via.placeholder.com/70";
+                        $thumb = $p['thumbnail'] ? "/constructioninnagpur/assets/images/projects/{$p['thumbnail']}" : "assets/images/projects/placeholder.jpeg";
                     ?>
                         <div class="popular-project">
                             <div class="popular-project-image">
-                                <img src="<?= $thumb ?>" alt="<?= sanitizeOutput($p['title']) ?>">
+                                <img src="assets/images/projects<?= $thumb ?>" alt="<?= sanitizeOutput($p['title']) ?>">
                             </div>
                             <div>
                                 <div class="popular-project-title">

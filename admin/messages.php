@@ -1,8 +1,7 @@
 <?php
 /**
  * Admin Messages Management
- * View, reply, and delete contact form submissions
- * Updated for new contact_messages table schema
+ * Uses ORIGINAL CSS + Updated for new schema + selected_plan
  */
 
 declare(strict_types=1);
@@ -38,7 +37,12 @@ if ($action === 'delete' && $message_id && is_numeric($message_id)) {
 // Fetch single message for view
 $message = null;
 if ($action === 'view' && $message_id && is_numeric($message_id)) {
-    $stmt = executeQuery("SELECT * FROM contact_messages WHERE id = ?", [$message_id]);
+    $stmt = executeQuery("
+        SELECT *, 
+               CONCAT(first_name, ' ', last_name) AS full_name 
+        FROM contact_messages 
+        WHERE id = ?
+    ", [$message_id]);
     $message = $stmt->fetch(PDO::FETCH_ASSOC);
     if (!$message) {
         $error_message = 'Message not found.';
@@ -53,11 +57,12 @@ if ($action === 'list') {
         SELECT 
             id, 
             first_name, 
-            last_name, 
+            last_name,
             email, 
             phone, 
             project_type, 
-            budget, 
+            budget,
+            selected_plan,
             message, 
             submitted_at,
             ip_address
@@ -111,6 +116,7 @@ require_once __DIR__ . '/includes/admin_header.php';
                             <th>Phone</th>
                             <th>Project Type</th>
                             <th>Budget</th>
+                            <th>Plan</th>
                             <th>Message Preview</th>
                             <th>Actions</th>
                         </tr>
@@ -142,6 +148,9 @@ require_once __DIR__ . '/includes/admin_header.php';
                                 </td>
                                 <td data-label="Budget">
                                     <?= $msg['budget'] ? sanitizeOutput($msg['budget']) : '<span class="text-muted">—</span>' ?>
+                                </td>
+                                <td data-label="Plan">
+                                    <?= $msg['selected_plan'] ? '<strong>' . sanitizeOutput($msg['selected_plan']) . '</strong>' : '<span class="text-muted">—</span>' ?>
                                 </td>
                                 <td data-label="Message">
                                     <?= sanitizeOutput(substr(strip_tags($msg['message']), 0, 60)) ?>
@@ -181,7 +190,7 @@ require_once __DIR__ . '/includes/admin_header.php';
                 <div class="col-md-6 col-lg-3">
                     <small class="text-muted">Full Name</small>
                     <p class="fw-bold mb-0">
-                        <?= sanitizeOutput(trim($message['first_name'] . ' ' . $message['last_name'])) ?>
+                        <?= sanitizeOutput($message['full_name']) ?>
                     </p>
                 </div>
                 <div class="col-md-6 col-lg-3">
@@ -222,6 +231,14 @@ require_once __DIR__ . '/includes/admin_header.php';
                     <small class="text-muted">Budget Range</small>
                     <p class="mb-0">
                         <span class="badge bg-success text-white"><?= sanitizeOutput($message['budget']) ?></span>
+                    </p>
+                </div>
+                <?php endif; ?>
+                <?php if ($message['selected_plan']): ?>
+                <div class="col-md-6 col-lg-3">
+                    <small class="text-muted">Selected Plan</small>
+                    <p class="mb-0">
+                        <span class="badge bg-primary text-white"><?= sanitizeOutput($message['selected_plan']) ?></span>
                     </p>
                 </div>
                 <?php endif; ?>

@@ -1,61 +1,53 @@
 <?php
 /**
- * Contact Page - Grand Jyothi Construction
- * HEADER: Uniform with index.php (BuildDream Theme)
- * PAGE DESIGN: 100% as per your original code
+ * Contact Page – Grand Jyothi Construction
+ * 100% aligned with the rest of the site
  */
 
 declare(strict_types=1);
-
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/security.php';
 
-$page_title = 'Contact Us | BuildDream Construction';
-$success_message = '';
-$error_message = '';
+$page_title = 'Contact Us | Grand Jyothi Construction';
+$success_message = $error_message = '';
 
-// Handle form submission
+/* ---------- 1. Form submission ---------- */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!validateCsrfToken($_POST['csrf_token'] ?? '')) {
         $error_message = 'Invalid security token. Please try again.';
-        logSecurityEvent('CSRF token validation failed on contact form', 'WARNING');
-    } 
-    elseif (!checkRateLimit('contact_form', 5, 300)) {
+        logSecurityEvent('CSRF fail on contact form', 'WARNING');
+    } elseif (!checkRateLimit('contact_form', 5, 300)) {
         $remaining = getRateLimitRemaining('contact_form', 300);
-        $error_message = 'Too many submissions. Please try again in ' . ceil($remaining / 60) . ' minutes.';
-        logSecurityEvent('Rate limit exceeded on contact form', 'WARNING');
+        $error_message = 'Too many submissions. Try again in ' . ceil($remaining / 60) . ' minutes.';
     } else {
-        $first_name = sanitizeInput(trim($_POST['first_name'] ?? ''));
-        $last_name = sanitizeInput(trim($_POST['last_name'] ?? ''));
-        $email = sanitizeInput(trim($_POST['email'] ?? ''));
-        $phone = sanitizeInput(trim($_POST['phone'] ?? ''));
+        $first_name   = sanitizeInput(trim($_POST['first_name'] ?? ''));
+        $last_name    = sanitizeInput(trim($_POST['last_name'] ?? ''));
+        $email        = sanitizeInput(trim($_POST['email'] ?? ''));
+        $phone        = sanitizeInput(trim($_POST['phone'] ?? ''));
         $project_type = sanitizeInput(trim($_POST['project_type'] ?? ''));
-        $budget = sanitizeInput(trim($_POST['budget'] ?? ''));
-        $message = sanitizeInput(trim($_POST['message'] ?? ''));
-        
+        $budget       = sanitizeInput(trim($_POST['budget'] ?? ''));
+        $message      = sanitizeInput(trim($_POST['message'] ?? ''));
+
         $errors = [];
-    
-        if (empty($first_name) || strlen($first_name) < 2) $errors[] = 'Please enter a valid first name.';
-        if (empty($last_name) || strlen($last_name) < 2) $errors[] = 'Please enter a valid last name.';
-        if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Please enter a valid email address.';
-        if (empty($phone) || !preg_match('/^\+?\d{10,15}$/', $phone)) $errors[] = 'Please enter a valid phone number.';
-        if (empty($message) || strlen($message) < 20) $errors[] = 'Please provide a detailed message (at least 20 characters).';
-    
+        if (empty($first_name) || strlen($first_name) < 2) $errors[] = 'Valid first name required.';
+        if (empty($last_name) || strlen($last_name) < 2) $errors[] = 'Valid last name required.';
+        if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Valid email required.';
+        if (empty($phone) || !preg_match('/^\+?\d{10,15}$/', $phone)) $errors[] = 'Valid phone required.';
+        if (empty($message) || strlen($message) < 20) $errors[] = 'Message must be at least 20 characters.';
+
         if (empty($errors)) {
             try {
-                $sql = "INSERT INTO contact_messages 
-                        (first_name, last_name, email, phone, project_type, budget, message, submitted_at) 
-                        VALUES (?, ?, ?, ?, ?, ?, ?, NOW())";
-                executeQuery($sql, [$first_name, $last_name, $email, $phone, $project_type, $budget, $message]);
-                
-                $success_message = 'Thank you! Your consultation request has been submitted. We\'ll contact you within 24 hours.';
-                logSecurityEvent('Contact form submitted successfully', 'INFO');
-                
-                $first_name = $last_name = $email = $phone = $project_type = $budget = $message = '';
+                executeQuery(
+                    "INSERT INTO contact_messages
+                     (first_name,last_name,email,phone,project_type,budget,message,submitted_at)
+                     VALUES (?,?,?,?,?,?,?,NOW())",
+                    [$first_name,$last_name,$email,$phone,$project_type,$budget,$message]
+                );
+                $success_message = "Thank you! We'll contact you within 24 hours.";
+                logSecurityEvent('Contact form submitted', 'INFO');
             } catch (PDOException $e) {
-                error_log('Contact Form Error: ' . $e->getMessage());
-                logSecurityEvent('Contact form database error: ' . $e->getMessage(), 'ERROR');
-                $error_message = 'An error occurred. Please try again later.';
+                error_log('Contact DB error: '.$e->getMessage());
+                $error_message = 'Submission failed. Please try again later.';
             }
         } else {
             $error_message = implode('<br>', $errors);
@@ -63,7 +55,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-require_once __DIR__ . '/includes/header.php'; // Uniform BuildDream Header
+/* ---------- 2. Sidebar data ---------- */
+$categories = executeQuery(
+    "SELECT SUBSTRING_INDEX(title,' ',1) AS cat, COUNT(*) AS cnt
+     FROM packages WHERE is_active=1 GROUP BY cat ORDER BY cat"
+)->fetchAll();
+
+$total_packages = executeQuery("SELECT COUNT(*) FROM packages WHERE is_active=1")->fetchColumn();
+
+$popular_packages = executeQuery(
+    "SELECT title, price_per_sqft FROM packages
+     WHERE is_active=1 ORDER BY display_order ASC LIMIT 3"
+)->fetchAll();
+
+require_once __DIR__ . '/includes/header.php';
 ?>
 
 <!DOCTYPE html>
@@ -72,313 +77,199 @@ require_once __DIR__ . '/includes/header.php'; // Uniform BuildDream Header
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= $page_title ?></title>
+
+    <!-- Bootstrap + Icons + Fonts -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Open+Sans:wght@400;500&display=swap" rel="stylesheet">
-    
-    <!-- YOUR ORIGINAL STYLES – UNTOUCHED -->
-    <style>
-        :root {
-            --primary-yellow: #F9A826;
-            --charcoal: #1A1A1A;
-            --white: #FFFFFF;
-            --light-gray: #f8f9fa;
-        }
-       
-        body {
-            font-family: 'ROBOTO', sans-serif;
-            color: var(--charcoal);
-            background-color: var(--white);
-            line-height: 1.6;
-            padding-top: 80px; /* For fixed header */
-        }
-       
-        h1, h2, h3, h4, h5, h6 {
-            font-family: 'Montserrat', sans-serif;
-            font-weight: 600;
-        }
-       
-        .btn-primary {
-            background-color: var(--primary-yellow);
-            border-color: var(--primary-yellow);
-            color: var(--charcoal);
-            font-weight: 600;
-            padding: 12px 30px;
-        }
-       
-        .btn-primary:hover {
-            background-color: #e89a1f;
-            border-color: #e89a1f;
-            color: var(--charcoal);
-        }
-       
-        .page-header {
-            background: linear-gradient(rgba(26, 26, 26, 0.8), rgba(26, 26, 26, 0.8)),
-                        url('https://images.unsplash.com/photo-1541888946425-d81bb19240f5?ixlib=rb-4.0.3&auto=format&fit=crop&w=1770&q=80') no-repeat center center;
-            background-size: cover;
-            color: var(--white);
-            padding: 80px 0;
-            text-align: center;
-        }
-       
-        .page-header h1 {
-            font-size: 2.8rem;
-            margin-bottom: 15px;
-        }
-       
-        .contact-section {
-            padding: 80px 0;
-        }
-       
-        .contact-form {
-            background-color: var(--white);
-            border-radius: 10px;
-            padding: 40px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-            height: 100%;
-        }
-       
-        .form-label {
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-       
-        .form-control, .form-select {
-            padding: 12px 15px;
-            border-radius: 5px;
-            border: 1px solid #ddd;
-            margin-bottom: 20px;
-            transition: all 0.3s ease;
-        }
-       
-        .form-control:focus, .form-select:focus {
-            border-color: var(--primary-yellow);
-            box-shadow: 0 0 0 0.25rem rgba(249, 168, 38, 0.25);
-        }
-       
-        .form-control.is-invalid {
-            border-color: #dc3545;
-        }
-       
-        .invalid-feedback {
-            display: none;
-            color: #dc3545;
-            font-size: 0.875rem;
-            margin-top: -15px;
-            margin-bottom: 15px;
-        }
-       
-        .contact-info {
-            background-color: var(--charcoal);
-            color: var(--white);
-            border-radius: 10px;
-            padding: 40px;
-            height: 100%;
-        }
-       
-        .contact-info h3 {
-            color: var(--primary-yellow);
-            margin-bottom: 25px;
-            position: relative;
-            padding-bottom: 15px;
-        }
-       
-        .contact-info h3:after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 60px;
-            height: 3px;
-            background-color: var(--primary-yellow);
-        }
-       
-        .contact-details {
-            list-style-type: none;
-            padding-left: 0;
-            margin-bottom: 30px;
-        }
-       
-        .contact-details li {
-            padding: 15px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            display: flex;
-            align-items: flex-start;
-        }
-       
-        .contact-details li:last-child {
-            border-bottom: none;
-        }
-       
-        .contact-details li i {
-            color: var(--primary-yellow);
-            margin-right: 15px;
-            width: 20px;
-            text-align: center;
-            margin-top: 3px;
-        }
-       
-        .map-container {
-            border-radius: 10px;
-            overflow: hidden;
-            height: 300px;
-            margin-top: 30px;
-        }
-       
-        .map-placeholder {
-            background-color: #e9ecef;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #6c757d;
-        }
-       
-        .floating-buttons {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            z-index: 1000;
-        }
-       
-        .floating-btn {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--white);
-            font-size: 1.5rem;
-            margin-bottom: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-            transition: all 0.3s ease;
-        }
-       
-        .floating-btn:hover {
-            transform: translateY(-5px);
-            color: var(--white);
-        }
-       
-        .whatsapp-btn {
-            background-color: #25D366;
-        }
-       
-        .call-btn {
-            background-color: var(--primary-yellow);
-            color: var(--charcoal);
-        }
-       
-        .success-message {
-            display: none;
-            background-color: #d4edda;
-            color: #155724;
-            padding: 15px;
-            border-radius: 5px;
-            margin-top: 20px;
-            text-align: center;
-            font-weight: 500;
-        }
-       
-        .error-message {
-            background-color: #f8d7da;
-            color: #721c24;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            text-align: center;
-            font-weight: 500;
-        }
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
 
-        @media (max-width: 768px) {
-            .page-header {
-                padding: 60px 0;
-            }
-            .page-header h1 {
-                font-size: 2.2rem;
-            }
-            .contact-section {
-                padding: 50px 0;
-            }
-            .floating-buttons {
-                bottom: 20px;
-                right: 20px;
-            }
-            .floating-btn {
-                width: 50px;
-                height: 50px;
-                font-size: 1.2rem;
-            }
+    <style>
+        :root{
+            --primary-yellow:#F9A826;--charcoal:#1A1A1A;--white:#fff;
+            --light-gray:#f8f9fa;--medium-gray:#e9ecef;
+        }
+        body{font-family:'Roboto',sans-serif;color:var(--charcoal);background:var(--white);line-height:1.6;}
+        h1,h2,h3,h4,h5,h6{font-family:'Poppins',sans-serif;font-weight:600;}
+
+        /* ==== BUTTONS ==== */
+        .btn-primary{background:var(--primary-yellow);border-color:var(--primary-yellow);
+            color:var(--charcoal);font-weight:600;padding:12px 30px;border-radius:8px;}
+        .btn-primary:hover{background:#e89a1f;border-color:#e89a1f;color:var(--charcoal);}
+        .btn-outline-light{border:2px solid rgba(255,255,255,.3);color:var(--white);
+            padding:12px 30px;border-radius:30px;}
+        .btn-outline-light:hover{background:rgba(255,255,255,.1);border-color:var(--white);}
+
+        /* ==== HERO ==== */
+        .contact-banner{height:500px;background:linear-gradient(rgba(26,26,26,.6),rgba(26,26,26,.6)),
+            url('https://images.unsplash.com/photo-1541888946425-d81bb19240f5?ixlib=rb-4.0.3&auto=format&fit=crop&w=1770&q=80')
+            center/cover no-repeat;display:flex;align-items:flex-end;padding:60px 0;color:var(--white);position:relative;}
+        .contact-banner::before{content:'';position:absolute;inset:0;
+            background:linear-gradient(135deg,rgba(249,168,38,.1) 0%,transparent 70%);}
+        .banner-title{font-size:3rem;margin-bottom:20px;line-height:1.2;}
+        .banner-subtitle{font-size:1.2rem;opacity:.9;}
+
+        /* ==== BREADCRUMB ==== */
+        .breadcrumb{background:transparent;padding:0;margin-bottom:20px;}
+        .breadcrumb-item a{color:rgba(255,255,255,.8);text-decoration:none;}
+        .breadcrumb-item.active{color:var(--primary-yellow);}
+
+        /* ==== CONTENT ==== */
+        .contact-section{padding:80px 0;}
+        .section-title{font-size:1.8rem;margin-bottom:30px;padding-bottom:15px;
+            border-bottom:2px solid var(--primary-yellow);display:inline-block;}
+
+        /* ==== FORM ==== */
+        .contact-form{background:var(--white);border-radius:10px;padding:40px;
+            box-shadow:0 5px 15px rgba(0,0,0,.05);}
+        .form-label{font-weight:600;color:var(--charcoal);margin-bottom:8px;}
+        .form-control,.form-select{padding:12px 15px;border-radius:5px;border:1px solid #ddd;
+            margin-bottom:20px;transition:all .3s;}
+        .form-control:focus,.form-select:focus{border-color:var(--primary-yellow);
+            box-shadow:0 0 0 .25rem rgba(249,168,38,.25);}
+        .invalid-feedback{color:#dc3545;font-size:.875rem;margin-top:-15px;margin-bottom:15px;display:none;}
+
+        /* ==== CONTACT INFO ==== */
+        .contact-info{background:var(--charcoal);color:var(--white);border-radius:10px;
+            padding:40px;height:100%;}
+        .contact-info h3{color:var(--primary-yellow);margin-bottom:25px;position:relative;
+            padding-bottom:15px;}
+        .contact-info h3::after{content:'';position:absolute;bottom:0;left:0;
+            width:60px;height:3px;background:var(--primary-yellow);}
+        .contact-details{list-style:none;padding:0;margin:0;}
+        .contact-details li{display:flex;align-items:flex-start;padding:15px 0;
+            border-bottom:1px solid rgba(255,255,255,.1);}
+        .contact-details li:last-child{border:none;}
+        .contact-details i{color:var(--primary-yellow);margin-right:15px;width:20px;
+            text-align:center;margin-top:3px;}
+
+        /* ==== MAP ==== */
+        .map-container{border-radius:10px;overflow:hidden;height:300px;margin-top:30px;}
+        .map-placeholder{background:#e9ecef;display:flex;align-items:center;justify-content:center;
+            color:#6c757d;height:100%;}
+
+        /* ==== SIDEBAR ==== */
+        .sidebar{background:var(--light-gray);border-radius:10px;padding:30px;margin-bottom:30px;}
+        .sidebar-title{font-size:1.2rem;margin-bottom:20px;padding-bottom:10px;
+            border-bottom:2px solid var(--primary-yellow);display:inline-block;}
+        .search-box{position:relative;margin-bottom:30px;}
+        .search-box input{width:100%;padding:12px 40px 12px 15px;border-radius:50px;border:1px solid #ddd;}
+        .search-box button{position:absolute;right:8px;top:8px;background:var(--primary-yellow);
+            border:none;color:var(--charcoal);width:36px;height:36px;border-radius:50%;
+            display:flex;align-items:center;justify-content:center;}
+        .category-list{list-style:none;padding:0;}
+        .category-list a{display:flex;justify-content:space-between;align-items:center;
+            padding:10px 0;color:var(--charcoal);text-decoration:none;border-bottom:1px solid #eee;}
+        .category-list a:hover,.category-list a.active{color:var(--primary-yellow);font-weight:600;}
+        .popular-package{display:flex;gap:12px;margin-bottom:15px;padding-bottom:15px;
+            border-bottom:1px solid #eee;}
+        .popular-package:last-child{margin-bottom:0;padding-bottom:0;border:none;}
+        .popular-package-image{width:60px;height:60px;border-radius:8px;overflow:hidden;flex-shrink:0;}
+        .popular-package-image img{width:100%;height:100%;object-fit:cover;}
+        .popular-package-title a{color:var(--charcoal);font-weight:500;text-decoration:none;}
+        .popular-package-title a:hover{color:var(--primary-yellow);}
+
+        /* ==== FLOATING BUTTONS ==== */
+        .floating-buttons{position:fixed;bottom:30px;right:30px;z-index:1000;}
+        .floating-btn{width:60px;height:60px;border-radius:50%;display:flex;
+            align-items:center;justify-content:center;color:var(--white);
+            font-size:1.5rem;margin-bottom:15px;box-shadow:0 5px 15px rgba(0,0,0,.2);
+            transition:all .3s;}
+        .floating-btn:hover{transform:translateY(-5px);}
+        .whatsapp-btn{background:#25D366;}
+        .call-btn{background:var(--primary-yellow);color:var(--charcoal);}
+
+        /* ==== ALERTS ==== */
+        .success-message,.error-message{padding:15px;border-radius:8px;margin-bottom:20px;
+            text-align:center;font-weight:500;}
+        .success-message{background:#d4edda;color:#155724;border:1px solid #c3e6cb;}
+        .error-message{background:#f8d7da;color:#721c24;border:1px solid #f5c6cb;}
+
+        /* ==== CTA ==== */
+        .cta-section{background:linear-gradient(135deg,var(--charcoal) 0%,#2d2d2d 100%);
+            color:var(--white);padding:80px 0;text-align:center;}
+        .cta-section h2{color:var(--white);margin-bottom:1.5rem;}
+
+        /* ==== RESPONSIVE ==== */
+        @media (max-width:992px){
+            .contact-banner{height:400px;padding:40px 0;}
+            .banner-title{font-size:2.2rem;}
+            .contact-section .row{flex-direction:column-reverse;}
+            .contact-form,.contact-info{padding:25px;}
+        }
+        @media (max-width:576px){
+            .floating-buttons{bottom:20px;right:20px;}
+            .floating-btn{width:50px;height:50px;font-size:1.2rem;}
         }
     </style>
 </head>
 <body>
 
-    <!-- Page Header -->
-    <section class="page-header">
-        <div class="container">
-            <h1>Contact Us</h1>
-            <p class="lead">Get in touch with our team for a free consultation and quote for your construction project</p>
-        </div>
-    </section>
+<!-- ====================== HERO ====================== -->
+<section class="contact-banner">
+    <div class="container">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/constructioninnagpur/">Home</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Contact</li>
+            </ol>
+        </nav>
+        <h1 class="banner-title">Contact Us</h1>
+        <p class="banner-subtitle">Get a free consultation and quote for your construction project</p>
+    </div>
+</section>
 
-    <!-- Contact Section -->
-    <section class="contact-section">
-        <div class="container">
-            <div class="row">
-                <!-- Contact Form -->
-                <div class="col-lg-7 mb-5 mb-lg-0">
-                    <div class="contact-form">
-                        <h3 class="mb-4">Request a Free Consultation</h3>
+<!-- ====================== MAIN + ASIDE ====================== -->
+<main class="contact-section">
+    <div class="container">
+        <div class="row g-5">
 
-                        <?php if ($error_message): ?>
-                            <div class="error-message">
-                                <i class="fas fa-exclamation-circle me-2"></i>
-                                <?= $error_message ?>
-                            </div>
-                        <?php endif; ?>
+            <!-- ==== MAIN: Contact Form ==== -->
+            <div class="col-lg-8">
 
-                        <form method="POST" action="" id="consultationForm">
-                            <?= getCsrfTokenField() ?>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="first_name" class="form-label">First Name *</label>
-                                        <input type="text" name="first_name" class="form-control" id="first_name" 
-                                               value="<?= sanitizeOutput($first_name ?? '') ?>" required>
-                                        <div class="invalid-feedback">Please provide your first name.</div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="last_name" class="form-label">Last Name *</label>
-                                        <input type="text" name="last_name" class="form-control" id="last_name" 
-                                               value="<?= sanitizeOutput($last_name ?? '') ?>" required>
-                                        <div class="invalid-feedback">Please provide your last name.</div>
-                                    </div>
-                                </div>
+                <?php if ($success_message): ?>
+                    <div class="success-message">
+                        <?= $success_message ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php if ($error_message): ?>
+                    <div class="error-message">
+                        <?= $error_message ?>
+                    </div>
+                <?php endif; ?>
+
+                <div class="contact-form">
+                    <h3 class="mb-4">Request a Free Consultation</h3>
+                    <form method="POST" id="consultationForm">
+                        <?= getCsrfTokenField() ?>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">First Name *</label>
+                                <input type="text" name="first_name" class="form-control" required
+                                       value="<?= sanitizeOutput($first_name ?? '') ?>">
+                                <div class="invalid-feedback">Valid first name required.</div>
                             </div>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="email" class="form-label">Email Address *</label>
-                                        <input type="email" name="email" class="form-control" id="email" 
-                                               value="<?= sanitizeOutput($email ?? '') ?>" required>
-                                        <div class="invalid-feedback">Please provide a valid email address.</div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="phone" class="form-label">Phone Number *</label>
-                                        <input type="tel" name="phone" class="form-control" id="phone" 
-                                               value="<?= sanitizeOutput($phone ?? '') ?>" required>
-                                        <div class="invalid-feedback">Please provide a valid phone number.</div>
-                                    </div>
-                                </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Last Name *</label>
+                                <input type="text" name="last_name" class="form-control" required
+                                       value="<?= sanitizeOutput($last_name ?? '') ?>">
+                                <div class="invalid-feedback">Valid last name required.</div>
                             </div>
-                            <div class="mb-3">
-                                <label for="project_type" class="form-label">Project Type</label>
-                                <select name="project_type" class="form-select" id="project_type">
+                            <div class="col-md-6">
+                                <label class="form-label">Email *</label>
+                                <input type="email" name="email" class="form-control" required
+                                       value="<?= sanitizeOutput($email ?? '') ?>">
+                                <div class="invalid-feedback">Valid email required.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Phone *</label>
+                                <input type="tel" name="phone" class="form-control" required
+                                       value="<?= sanitizeOutput($phone ?? '') ?>">
+                                <div class="invalid-feedback">Valid phone required.</div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Project Type</label>
+                                <select name="project_type" class="form-select">
                                     <option value="">Select Project Type</option>
                                     <option value="New Home Construction" <?= ($project_type ?? '') === 'New Home Construction' ? 'selected' : '' ?>>New Home Construction</option>
                                     <option value="Home Renovation" <?= ($project_type ?? '') === 'Home Renovation' ? 'selected' : '' ?>>Home Renovation</option>
@@ -387,9 +278,9 @@ require_once __DIR__ . '/includes/header.php'; // Uniform BuildDream Header
                                     <option value="Other" <?= ($project_type ?? '') === 'Other' ? 'selected' : '' ?>>Other</option>
                                 </select>
                             </div>
-                            <div class="mb-3">
-                                <label for="budget" class="form-label">Estimated Budget</label>
-                                <select name="budget" class="form-select" id="budget">
+                            <div class="col-12">
+                                <label class="form-label">Estimated Budget</label>
+                                <select name="budget" class="form-select">
                                     <option value="">Select Budget Range</option>
                                     <option value="Under ₹20 Lakhs" <?= ($budget ?? '') === 'Under ₹20 Lakhs' ? 'selected' : '' ?>>Under ₹20 Lakhs</option>
                                     <option value="₹20-40 Lakhs" <?= ($budget ?? '') === '₹20-40 Lakhs' ? 'selected' : '' ?>>₹20-40 Lakhs</option>
@@ -398,96 +289,163 @@ require_once __DIR__ . '/includes/header.php'; // Uniform BuildDream Header
                                     <option value="Above ₹1.5 Crore" <?= ($budget ?? '') === 'Above ₹1.5 Crore' ? 'selected' : '' ?>>Above ₹1.5 Crore</option>
                                 </select>
                             </div>
-                            <div class="mb-3">
-                                <label for="message" class="form-label">Project Details *</label>
-                                <textarea name="message" class="form-control" id="message" rows="5" 
-                                          placeholder="Please describe your project requirements, timeline, and any specific needs..." required><?= sanitizeOutput($message ?? '') ?></textarea>
-                                <div class="invalid-feedback">Please provide details about your project.</div>
+                            <div class="col-12">
+                                <label class="form-label">Project Details *</label>
+                                <textarea name="message" class="form-control" rows="5" required
+                                          placeholder="Describe your project, timeline, special needs..."><?= sanitizeOutput($message ?? '') ?></textarea>
+                                <div class="invalid-feedback">Message must be at least 20 characters.</div>
                             </div>
-                            <button type="submit" class="btn btn-primary btn-lg w-100">Submit Request</button>
-
-                            <div class="success-message" id="successMessage" style="display: <?= $success_message ? 'block' : 'none' ?>;">
-                                <i class="fas fa-check-circle me-2"></i> <?= $success_message ?>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary w-100">Submit Request</button>
                             </div>
-                        </form>
-                    </div>
+                        </div>
+                    </form>
                 </div>
-               
-                <!-- Contact Info & Map -->
-                <div class="col-lg-5">
-                    <div class="contact-info">
+
+            </div>
+
+            <!-- ==== ASIDE: Contact Info + Sidebar ==== -->
+            <aside class="col-lg-4">
+                <div class="sticky-top" style="top:2rem;">
+
+                    <!-- CONTACT INFO -->
+                    <div class="contact-info mb-4">
                         <h3>Get In Touch</h3>
                         <ul class="contact-details">
-                            <li>
-                                <i class="fas fa-map-marker-alt"></i>
-                                <div>
-                                    <strong>Office Address</strong><br>
+                            <li><i class="fas fa-map-marker-alt"></i>
+                                <div><strong>Office Address</strong><br>
                                     Grand Jyothi Construction,<br>
                                     123 Construction Plaza, Dharampeth,<br>
-                                    Nagpur - 440010, Maharashtra, India
-                                </div>
+                                    Nagpur - 440010, Maharashtra, India</div>
                             </li>
-                            <li>
-                                <i class="fas fa-phone"></i>
-                                <div>
-                                    <strong>Phone Number</strong><br>
-                                    +91 712 2345678<br>
-                                    +91 98765 43210
-                                </div>
+                            <li><i class="fas fa-phone"></i>
+                                <div><strong>Phone</strong><br>+91 712 2345678<br>+91 98765 43210</div>
                             </li>
-                            <li>
-                                <i class="fas fa-envelope"></i>
-                                <div>
-                                    <strong>Email Address</strong><br>
-                                    info@grandjyothi.com<br>
-                                    projects@grandjyothi.com
-                                </div>
+                            <li><i class="fas fa-envelope"></i>
+                                <div><strong>Email</strong><br>info@grandjyothi.com<br>projects@grandjyothi.com</div>
                             </li>
-                            <li>
-                                <i class="fas fa-clock"></i>
-                                <div>
-                                    <strong>Working Hours</strong><br>
-                                    Monday - Friday: 9:00 AM - 6:00 PM<br>
-                                    Saturday: 9:00 AM - 2:00 PM<br>
-                                    Sunday: Closed
-                                </div>
+                            <li><i class="fas fa-clock"></i>
+                                <div><strong>Hours</strong><br>Mon‑Fri: 9AM‑6PM<br>Sat: 9AM‑2PM<br>Sun: Closed</div>
                             </li>
                         </ul>
-                       
+
                         <div class="map-container">
                             <div class="map-placeholder">
-                                <div class="text-center">
-                                    <i class="fas fa-map-marked-alt fa-3x mb-3"></i>
-                                    <p>Google Maps Integration</p>
-                                    <small>Location: Nagpur, Maharashtra</small>
-                                </div>
+                                <i class="fas fa-map-marked-alt fa-3x mb-3"></i>
+                                <p>Google Maps Integration</p>
+                                <small>Location: Nagpur, Maharashtra</small>
                             </div>
                         </div>
                     </div>
+
+                    <!-- SEARCH -->
+                    <div class="sidebar">
+                        <h3 class="sidebar-title">Search Packages</h3>
+                        <form action="/constructioninnagpur/packages.php" method="get" class="search-box">
+                            <input type="text" name="search" placeholder="Search packages..." value="<?= sanitizeOutput($_GET['search'] ?? '') ?>">
+                            <button type="submit"><i class="fas fa-search"></i></button>
+                        </form>
+                    </div>
+
+                    <!-- CATEGORIES -->
+                    <div class="sidebar">
+                        <h3 class="sidebar-title">Categories</h3>
+                        <ul class="category-list">
+                            <li><a href="/constructioninnagpur/packages.php" class="<?= empty($_GET['category']) ? 'active' : '' ?>">
+                                <span>All Packages</span>
+                                <span class="badge bg-dark text-white"><?= $total_packages ?></span>
+                            </a></li>
+                            <?php foreach ($categories as $c): ?>
+                                <li><a href="/constructioninnagpur/packages.php?category=<?= urlencode($c['cat']) ?>"
+                                       class="<?= ($_GET['category'] ?? '') === $c['cat'] ? 'active' : '' ?>">
+                                    <span><?= ucfirst(sanitizeOutput($c['cat'])) ?></span>
+                                    <span class="badge bg-dark text-white"><?= $c['cnt'] ?></span>
+                                </a></li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+
+                    <!-- POPULAR -->
+                    <div class="sidebar">
+                        <h3 class="sidebar-title">Popular Packages</h3>
+                        <?php foreach ($popular_packages as $p): ?>
+                            <div class="popular-package">
+                                <div class="popular-package-image">
+                                    <img src="https://via.placeholder.com/60" alt="">
+                                </div>
+                                <div>
+                                    <div class="popular-package-title">
+                                        <a href="/constructioninnagpur/select-plan.php?plan=<?= urlencode($p['title']) ?>">
+                                            <?= sanitizeOutput($p['title']) ?>
+                                        </a>
+                                    </div>
+                                    <small class="text-muted">
+                                        <?php if ($p['price_per_sqft'] > 0): ?>
+                                            ₹<?= number_format((float)$p['price_per_sqft']) ?>/sq.ft
+                                        <?php else: ?> Custom <?php endif; ?>
+                                    </small>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+
+                </div>
+            </aside>
+
+        </div>
+    </div>
+</main>
+
+<!-- ====================== FLOATING BUTTONS ====================== -->
+<div class="floating-buttons">
+    <a href="https://wa.me/919876543210" target="_blank" class="floating-btn whatsapp-btn" title="Chat on WhatsApp">
+        <i class="fab fa-whatsapp"></i>
+    </a>
+    <a href="tel:+919876543210" class="floating-btn call-btn" title="Call Us">
+        <i class="fas fa-phone"></i>
+    </a>
+</div>
+
+<!-- ====================== CTA ====================== -->
+<section class="cta-section">
+    <div class="container">
+        <div class="row justify-content-center text-center">
+            <div class="col-lg-8">
+                <h2 class="display-5 fw-bold mb-4">Ready to Build Your Dream?</h2>
+                <p class="lead mb-4">Let’s discuss your vision and create something extraordinary together</p>
+                <div class="d-flex justify-content-center gap-3 flex-wrap">
+                    <a href="/constructioninnagpur/contact.php" class="btn btn-primary btn-lg">
+                        Get Free Consultation
+                    </a>
+                    <a href="/constructioninnagpur/packages.php" class="btn btn-outline-light btn-lg">
+                        View All Packages
+                    </a>
                 </div>
             </div>
         </div>
-    </section>
-
-    <!-- Floating Action Buttons -->
-    <div class="floating-buttons">
-        <a href="https://wa.me/919876543210" class="floating-btn whatsapp-btn" target="_blank" title="Chat on WhatsApp">
-            <i class="fab fa-whatsapp"></i>
-        </a>
-        <a href="tel:+919876543210" class="floating-btn call-btn" title="Call Us">
-            <i class="fas fa-phone"></i>
-        </a>
     </div>
+</section>
 
-    <?php require_once __DIR__ . '/includes/footer.php'; ?>
+<?php require_once __DIR__ . '/includes/footer.php'; ?>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        <?php if ($success_message): ?>
-        setTimeout(() => {
-            document.getElementById('successMessage').style.display = 'none';
-        }, 10000);
-        <?php endif; ?>
-    </script>
+<script>
+document.getElementById('consultationForm')?.addEventListener('submit', function(e) {
+    let ok = true;
+    ['first_name','last_name','email','phone','message'].forEach(id => {
+        const el = document.querySelector(`[name="${id}"]`);
+        const fb = el.nextElementSibling?.classList?.contains('invalid-feedback') ? el.nextElementSibling : null;
+        if (!el.value.trim()) {
+            el.classList.add('is-invalid');
+            if (fb) fb.style.display = 'block';
+            ok = false;
+        } else {
+            el.classList.remove('is-invalid');
+            if (fb) fb.style.display = 'none';
+        }
+    });
+    if (!ok) e.preventDefault();
+});
+</script>
+
 </body>
 </html>
