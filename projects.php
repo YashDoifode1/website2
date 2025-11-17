@@ -8,9 +8,10 @@
 declare(strict_types=1);
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/security.php';
+require_once __DIR__ . '/config.php';
 
 // Define base paths
-$base_path = '/constructioninnagpur';
+$base_path = rtrim(SITE_URL, '/');
 $assets_path = $base_path . '/assets/images';
 $placeholder_main = 'https://via.placeholder.com/600x400/1A1A1A/F9A826?text=No+Image';
 $placeholder_sidebar = 'https://via.placeholder.com/70x70/eeeeee/999999?text=NA';

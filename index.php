@@ -1,12 +1,13 @@
 <?php
 /**
  * Home Page – Grand Jyothi Construction
- * 100% compatible with your current DB schema
+ * Now with: Projects + Services + Blog Slideshow
  */
 
 declare(strict_types=1);
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/security.php';
+require_once __DIR__ . '/config.php';
 
 $page_title = 'Grand Jyothi Construction | Build Your Dream Home';
 
@@ -39,7 +40,7 @@ $testimonials = executeQuery("
     ORDER BY t.created_at DESC LIMIT 6
 ")->fetchAll();
 
-// ---------- 4. Latest 8 Projects (Gallery) ----------
+// ---------- 4. Latest 8 Projects ----------
 $featured_projects = executeQuery("
     SELECT p.id, p.title, p.location,
            (SELECT image_path FROM project_images WHERE project_id = p.id ORDER BY `order` ASC, id ASC LIMIT 1) AS image_path
@@ -49,7 +50,26 @@ $featured_projects = executeQuery("
     LIMIT 8
 ")->fetchAll();
 
-// ---------- 5. Sidebar Data ----------
+// ---------- 5. Latest 8 Services ----------
+$featured_services = executeQuery("
+    SELECT s.id, s.title, s.slug, s.cover_image,
+           SUBSTRING(s.description, 1, 100) AS short_desc
+    FROM services s
+    WHERE s.cover_image IS NOT NULL AND s.cover_image != ''
+    ORDER BY s.created_at DESC
+    LIMIT 8
+")->fetchAll();
+
+// ---------- 6. Latest 8 Blog Articles ----------
+$featured_blogs = executeQuery("
+    SELECT b.id, b.title, b.slug, b.featured_image, b.excerpt, b.category, b.created_at
+    FROM blog_articles b
+    WHERE b.is_published = 1 AND b.featured_image IS NOT NULL AND b.featured_image != ''
+    ORDER BY b.created_at DESC
+    LIMIT 8
+")->fetchAll();
+
+// ---------- 7. Sidebar Data ----------
 $categories = executeQuery(
     "SELECT SUBSTRING_INDEX(title,' ',1) AS cat, COUNT(*) AS cnt
      FROM packages WHERE is_active=1 GROUP BY cat ORDER BY cat"
@@ -62,13 +82,15 @@ $popular_packages = executeQuery(
            (SELECT image_path FROM project_images WHERE project_id = p.id ORDER BY `order` ASC, id ASC LIMIT 1) AS thumb
      FROM packages p
      WHERE p.is_active=1 
-     ORDER BY p.display_order ASC LIMIT 3
-")->fetchAll();
+     ORDER BY p.display_order ASC LIMIT 3"
+)->fetchAll();
 
 // Paths
-$base_path = '/constructioninnagpur';
+$base_path = rtrim(SITE_URL, '/');
 $assets_path = $base_path . '/assets/images';
 $placeholder = 'https://via.placeholder.com/800x600/1A1A1A/F9A826?text=No+Image';
+$service_placeholder = 'https://via.placeholder.com/600x400/1A1A1A/F9A826?text=Service';
+$blog_placeholder = 'https://via.placeholder.com/600x400/1A1A1A/F9A826?text=Blog';
 
 require_once __DIR__ . '/includes/header.php';
 ?>
@@ -254,7 +276,7 @@ require_once __DIR__ . '/includes/header.php';
             border-radius: 12px;
             padding: 25px;
             margin: 25px 0;
-            box-shadow: 0 5px 15px rgba(0,0,0,005);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
         }
         .cost-item {
             display: flex;
@@ -305,7 +327,7 @@ require_once __DIR__ . '/includes/header.php';
         .gallery-title{
             margin-bottom: 50px;
         }
-        .project-gallery-swiper {
+        .project-gallery-swiper, .services-gallery-swiper, .blog-gallery-swiper {
             padding: 30px 10px;
             border-radius: 20px;
             overflow: hidden;
@@ -364,6 +386,18 @@ require_once __DIR__ . '/includes/header.php';
         .gallery-slide:hover .gallery-overlay p {
             transform: translateY(0);
             opacity: 1;
+        }
+        .blog-category-badge{
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: var(--primary-yellow);
+            color: var(--charcoal);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            z-index: 2;
         }
         .swiper-button-next,
         .swiper-button-prev {
@@ -446,24 +480,8 @@ require_once __DIR__ . '/includes/header.php';
         }
         .popular-package-title a:hover{color:var(--primary-yellow);}
 
-        /* Popular Packages Swiper */
-        .popularPackagesSwiper {
-            overflow: hidden;
-            border-radius: 12px;
-        }
-        .popularPackagesSwiper .swiper-slide {
-            padding: 8px 0;
-        }
-        .popularPackagesSwiper .swiper-pagination-bullet {
-            background: #ccc;
-            opacity: 1;
-        }
-        .popularPackagesSwiper .swiper-pagination-bullet-active {
-            background: var(--primary-yellow);
-        }
-
         .floating-buttons{
-            position:fixed;bottom:30px;right:30px;z-index:1000;display:flex;flex-direction:column;gap:15px;
+            position:fixed;bottom:30px;right:30px;z-index:1000&display:flex;flex-direction:column;gap:15px;
         }
         .floating-btn{
             width:60px;height:60px;border-radius:50%;display:flex;
@@ -520,6 +538,47 @@ require_once __DIR__ . '/includes/header.php';
 </section>
 
 <main>
+
+    
+
+    <!-- ==== OUR SERVICES SLIDESHOW ==== -->
+    <section class="gallery-section">
+        <div class="container">
+            <h2 class="section-title gallery-title">Our Construction Services</h2>
+            <div class="swiper services-gallery-swiper">
+                <div class="swiper-wrapper">
+                    <?php foreach ($featured_services as $srv): 
+                        $img_src = !empty($srv['cover_image']) 
+                            ? $base_path . sanitizeOutput($srv['cover_image'])
+                            : $service_placeholder;
+                        $slug = !empty($srv['slug']) 
+                            ? sanitizeOutput($srv['slug']) 
+                            : strtolower(preg_replace('/[^a-z0-9]+/', '-', $srv['title']));
+                    ?>
+                    <div class="swiper-slide">
+                        <a href="<?= $base_path ?>/service-info.php?slug=<?= urlencode($slug) ?>" class="gallery-slide">
+                            <img src="<?= $img_src ?>" 
+                                 alt="<?= sanitizeOutput($srv['title']) ?>" loading="lazy"
+                                 onerror="this.src='<?= $service_placeholder ?>'">
+                            <div class="gallery-overlay">
+                                <h3><?= sanitizeOutput($srv['title']) ?></h3>
+                                <p><?= sanitizeOutput($srv['short_desc']) ?>...</p>
+                            </div>
+                        </a>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+                <div class="swiper-button-prev"></div>
+                <div class="swiper-button-next"></div>
+                <div class="swiper-pagination"></div>
+            </div>
+            <div class="text-center mt-4">
+                <a href="<?= $base_path ?>/services.php" class="btn btn-outline-primary btn-lg">
+                    View All Services
+                </a>
+            </div>
+        </div>
+    </section>
 
     <!-- ==== GALLERY SLIDESHOW (Latest 8 Projects) ==== -->
     <section class="gallery-section">
@@ -648,43 +707,6 @@ require_once __DIR__ . '/includes/header.php';
                             </ul>
                         </div>
 
-                        <!-- POPULAR PACKAGES WITH AUTO-SLIDESHOW -->
-                        <div class="sidebar">
-                            <h3 class="sidebar-title d-flex justify-content-between align-items-center">
-                                Popular Packages
-                                <span class="badge bg-primary rounded-pill">New</span>
-                            </h3>
-                            <div class="swiper popularPackagesSwiper">
-                                <div class="swiper-wrapper">
-                                    <?php foreach ($popular_packages as $p): 
-                                        $thumb = $p['thumb'] 
-                                            ? $assets_path . '/' . $p['thumb']
-                                            : $placeholder;
-                                    ?>
-                                        <div class="swiper-slide">
-                                            <div class="popular-package">
-                                                <div class="popular-package-image">
-                                                    <img src="<?= $thumb ?>" alt="<?= sanitizeOutput($p['title']) ?>" loading="lazy"
-                                                         onerror="this.src='<?= $placeholder ?>'">
-                                                </div>
-                                                <div class="flex-grow-1">
-                                                    <div class="popular-package-title">
-                                                        <a href="<?= $base_path ?>/select-plan.php?plan=<?= urlencode($p['title']) ?>">
-                                                            <?= sanitizeOutput($p['title']) ?>
-                                                        </a>
-                                                    </div>
-                                                    <small class="text-muted d-block">
-                                                        <?= $p['price_per_sqft'] > 0 ? '₹'.number_format((float)$p['price_per_sqft']).'/sq.ft' : 'Custom Quote' ?>
-                                                    </small>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    <?php endforeach; ?>
-                                </div>
-                                <div class="swiper-pagination mt-2"></div>
-                            </div>
-                        </div>
-
                     </div>
                 </aside>
 
@@ -811,6 +833,49 @@ require_once __DIR__ . '/includes/header.php';
         </div>
     </section>
 
+    <!-- ==== LATEST BLOG ARTICLES SLIDESHOW (NEW!) ==== -->
+    <section class="gallery-section bg-white">
+        <div class="container">
+            <h2 class="section-title gallery-title">Latest Blog & Insights</h2>
+            <div class="swiper blog-gallery-swiper">
+                <div class="swiper-wrapper">
+                    <?php foreach ($featured_blogs as $blog): 
+                        $img_src = !empty($blog['featured_image']) 
+                            ? $assets_path . '/' . sanitizeOutput($blog['featured_image'])
+                            : $blog_placeholder;
+                        $slug = sanitizeOutput($blog['slug']);
+                    ?>
+                    <div class="swiper-slide">
+                        <a href="<?= $base_path ?>/blog-detail.php?slug=<?= urlencode($slug) ?>" class="gallery-slide">
+                            <img src="<?= $img_src ?>" 
+                                 alt="<?= sanitizeOutput($blog['title']) ?>" loading="lazy"
+                                 onerror="this.src='<?= $blog_placeholder ?>'">
+                            <?php if ($blog['category']): ?>
+                                <div class="blog-category-badge"><?= sanitizeOutput($blog['category']) ?></div>
+                            <?php endif; ?>
+                            <div class="gallery-overlay">
+                                <h3><?= sanitizeOutput($blog['title']) ?></h3>
+                                <p><?= sanitizeOutput(substr(strip_tags($blog['excerpt']), 0, 120)) ?>...</p>
+                                <small class="text-light opacity-75">
+                                    <i class="fas fa-calendar me-1"></i> <?= date('d M Y', strtotime($blog['created_at'])) ?>
+                                </small>
+                            </div>
+                        </a>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+                <div class="swiper-button-prev"></div>
+                <div class="swiper-button-next"></div>
+                <div class="swiper-pagination"></div>
+            </div>
+            <div class="text-center mt-4">
+                <a href="<?= $base_path ?>/blog.php" class="btn btn-outline-primary btn-lg">
+                    View All Articles
+                </a>
+            </div>
+        </div>
+    </section>
+
     <!-- ==== TESTIMONIALS ==== -->
     <section class="section-padding bg-light-alt">
         <div class="container">
@@ -847,7 +912,7 @@ require_once __DIR__ . '/includes/header.php';
     <a href="https://wa.me/+919075956483" target="_blank" class="floating-btn whatsapp-btn" title="Chat on WhatsApp">
         <i class="fab fa-whatsapp"></i>
     </a>
-    <a href="tel:++919075956483" class="floating-btn call-btn" title="Call Us">
+    <a href="tel:+919075956483" class="floating-btn call-btn" title="Call Us">
         <i class="fas fa-phone"></i>
     </a>
 </div>
@@ -876,9 +941,14 @@ require_once __DIR__ . '/includes/header.php';
 
 <!-- Swiper JS -->
 <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+
+<!-- Bootstrap Bundle with Popper -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Your Custom JS -->
 <script>
-    // Gallery Swiper
-    const swiper = new Swiper('.project-gallery-swiper', {
+    // Projects Gallery Swiper
+    const projectSwiper = new Swiper('.project-gallery-swiper', {
         loop: true,
         autoplay: { delay: 5000, disableOnInteraction: false },
         navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' },
@@ -892,14 +962,34 @@ require_once __DIR__ . '/includes/header.php';
         }
     });
 
-    // Popular Packages Swiper
-    const popularSwiper = new Swiper('.popularPackagesSwiper', {
+    // Services Gallery Swiper
+    const servicesSwiper = new Swiper('.services-gallery-swiper', {
         loop: true,
-        autoplay: { delay: 3000, disableOnInteraction: false },
-        pagination: { el: '.popularPackagesSwiper .swiper-pagination', clickable: true },
-        effect: 'fade',
-        fadeEffect: { crossFade: true },
-        speed: 800
+        autoplay: { delay: 4500, disableOnInteraction: false },
+        navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' },
+        pagination: { el: '.swiper-pagination', clickable: true },
+        spaceBetween: 30,
+        breakpoints: {
+            320: { slidesPerView: 1 },
+            640: { slidesPerView: 1 },
+            768: { slidesPerView: 2 },
+            1024: { slidesPerView: 3 }
+        }
+    });
+
+    // Blog Gallery Swiper
+    const blogSwiper = new Swiper('.blog-gallery-swiper', {
+        loop: true,
+        autoplay: { delay: 4000, disableOnInteraction: false },
+        navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' },
+        pagination: { el: '.swiper-pagination', clickable: true },
+        spaceBetween: 30,
+        breakpoints: {
+            320: { slidesPerView: 1 },
+            640: { slidesPerView: 1 },
+            768: { slidesPerView: 2 },
+            1024: { slidesPerView: 3 }
+        }
     });
 
     // Estimate Calculator
@@ -952,6 +1042,8 @@ require_once __DIR__ . '/includes/header.php';
     document.getElementById('squareFootage').addEventListener('input', calculateEstimate);
     document.getElementById('packageType').addEventListener('change', calculateEstimate);
     document.querySelectorAll('#addSolar, #addGarden, #addSmart').forEach(cb => {
+        cb.add来到了这里
+
         cb.addEventListener('change', function() {
             const card = this.closest('.addon-card');
             if (card) card.classList.toggle('selected', this.checked);

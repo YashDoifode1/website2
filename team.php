@@ -7,6 +7,7 @@
 declare(strict_types=1);
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/security.php';
+require_once __DIR__ . '/config.php';
 
 $page_title = 'Our Team | Grand Jyothi Construction';
 
@@ -172,7 +173,7 @@ require_once __DIR__ . '/includes/header.php';
     <div class="container">
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/constructioninnagpur/">Home</a></li>
+                <li class="breadcrumb-item"><a href="<?php echo SITE_URL; ?>/">Home</a></li>
                 <li class="breadcrumb-item active" aria-current="page">Team</li>
             </ol>
         </nav>
@@ -203,14 +204,23 @@ require_once __DIR__ . '/includes/header.php';
                         </div>
                     <?php else: ?>
                         <div class="team-grid">
-                            <?php foreach ($team_members as $member): 
-                                $photo = !empty($member['photo']) 
-                                    ? "/constructioninnagpur/assets/images/{$member['photo']}" 
-                                    : "https://via.placeholder.com/300x300?text=" . urlencode($member['name']);
-                                $expertise_list = !empty($member['expertise']) 
-                                    ? array_map('trim', explode(',', $member['expertise'])) 
-                                    : [];
-                            ?>
+                           <?php foreach ($team_members as $member): 
+
+    // If photo exists → use SITE_URL/assets/images/filename
+    if (!empty($member['photo'])) {
+        $photo = SITE_URL . "/assets/images/" . sanitizeOutput($member['photo']);
+    } else {
+        // Fallback placeholder
+        $photo = "https://via.placeholder.com/300x300?text=" . urlencode($member['name']);
+    }
+
+    // Expertise list
+    $expertise_list = !empty($member['expertise']) 
+        ? array_map('trim', explode(',', $member['expertise'])) 
+        : [];
+
+?>
+
                                 <div class="team-member">
                                     <div class="member-image">
                                         <img src="<?= $photo ?>" 
@@ -319,7 +329,7 @@ require_once __DIR__ . '/includes/header.php';
                     <!-- SEARCH -->
                     <div class="sidebar">
                         <h3 class="sidebar-title">Search Packages</h3>
-                        <form action="/constructioninnagpur/packages.php" method="get" class="search-box">
+                        <form action="<?php echo SITE_URL; ?>/packages.php" method="get" class="search-box">
                             <input type="text" name="search" placeholder="Search packages..." value="<?= sanitizeOutput($_GET['search'] ?? '') ?>">
                             <button type="submit"><i class="fas fa-search"></i></button>
                         </form>
@@ -329,12 +339,12 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="sidebar">
                         <h3 class="sidebar-title">Categories</h3>
                         <ul class="category-list">
-                            <li><a href="/constructioninnagpur/packages.php" class="<?= empty($_GET['category']) ? 'active' : '' ?>">
+                            <li><a href="<?php echo SITE_URL; ?>/packages.php" class="<?= empty($_GET['category']) ? 'active' : '' ?>">
                                 <span>All Packages</span>
                                 <span class="badge bg-dark text-white"><?= $total_packages ?></span>
                             </a></li>
                             <?php foreach ($categories as $c): ?>
-                                <li><a href="/constructioninnagpur/packages.php?category=<?= urlencode($c['cat']) ?>"
+                                <li><a href="<?php echo SITE_URL; ?>/packages.php?category=<?= urlencode($c['cat']) ?>"
                                        class="<?= ($_GET['category'] ?? '') === $c['cat'] ? 'active' : '' ?>">
                                     <span><?= ucfirst(sanitizeOutput($c['cat'])) ?></span>
                                     <span class="badge bg-dark text-white"><?= $c['cnt'] ?></span>
@@ -344,7 +354,7 @@ require_once __DIR__ . '/includes/header.php';
                     </div>
 
                     <!-- POPULAR -->
-                    <div class="sidebar">
+                    <!-- <div class="sidebar">
                         <h3 class="sidebar-title">Popular Packages</h3>
                         <?php foreach ($popular_packages as $p): ?>
                             <div class="popular-package">
@@ -353,7 +363,7 @@ require_once __DIR__ . '/includes/header.php';
                                 </div>
                                 <div>
                                     <div class="popular-package-title">
-                                        <a href="/constructioninnagpur/select-plan.php?plan=<?= urlencode($p['title']) ?>">
+                                        <a href="<?php echo SITE_URL; ?>/select-plan.php?plan=<?= urlencode($p['title']) ?>">
                                             <?= sanitizeOutput($p['title']) ?>
                                         </a>
                                     </div>
@@ -365,7 +375,7 @@ require_once __DIR__ . '/includes/header.php';
                                 </div>
                             </div>
                         <?php endforeach; ?>
-                    </div>
+                    </div> -->
 
                 </div>
             </aside>
@@ -392,10 +402,10 @@ require_once __DIR__ . '/includes/header.php';
                 <h2 class="display-5 fw-bold mb-4">Let’s Build Something Amazing Together</h2>
                 <p class="lead mb-4">Ready to start your construction project? Our expert team is here to help.</p>
                 <div class="d-flex justify-content-center gap-3 flex-wrap">
-                    <a href="/constructioninnagpur/contact.php" class="btn btn-primary btn-lg">
+                    <a href="<?php echo SITE_URL; ?>/contact.php" class="btn btn-primary btn-lg">
                         Contact Us
                     </a>
-                    <a href="/constructioninnagpur/projects.php" class="btn btn-outline-light btn-lg">
+                    <a href="<?php echo SITE_URL; ?>/projects.php" class="btn btn-outline-light btn-lg">
                         View Our Work
                     </a>
                 </div>

@@ -8,6 +8,7 @@
 declare(strict_types=1);
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/security.php';
+require_once __DIR__ . '/config.php';
 
 /* ---------- Helper ---------- */
 function currentUrl(): string {
@@ -41,7 +42,7 @@ $imgStmt = executeQuery(
 $images = $imgStmt->fetchAll(PDO::FETCH_ASSOC);
 
 /* ---------- Paths ---------- */
-$base_path = '/constructioninnagpur';
+$base_path = rtrim(SITE_URL, '/');
 $assets_path = $base_path . '/assets/images';
 $placeholder_main = 'https://via.placeholder.com/1200x520/1A1A1A/F9A826?text=No+Image';
 $placeholder_thumb = 'https://via.placeholder.com/100/1A1A1A/F9A826?text=NA';

@@ -10,6 +10,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/upload.php';
+require_once __DIR__ . '/../config.php';
 
 requireAdmin();
 
@@ -220,7 +221,7 @@ require_once __DIR__ . '/includes/admin_header.php';
                 <?php if ($member && $member['photo'] && $member['photo'] !== 'avatar.jpg'): ?>
                     <div class="current-image" style="margin-top: 1rem;">
                         <p style="font-size: 0.875rem; color: #64748b; margin-bottom: 0.5rem;">Current Photo:</p>
-                        <img src="/constructioninnagpur/assets/images/<?= sanitizeOutput($member['photo']) ?>" 
+                        <img src="<?php echo SITE_URL; ?>/assets/images/<?= sanitizeOutput($member['photo']) ?>" 
                              alt="Current" 
                              style="max-width: 150px; border-radius: 50%; border: 2px solid #e2e8f0;">
                     </div>

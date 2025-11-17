@@ -9,10 +9,11 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../config.php';
 
 // If already logged in, redirect to dashboard
 if (isAdminLoggedIn()) {
-    redirect('/constructioninnagpur/admin/dashboard.php');
+    redirect(SITE_URL . '/admin/dashboard.php');
 }
 
 $error_message = '';
@@ -32,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (authenticateAdmin($username, $password)) {
             // Regenerate session ID for security
             session_regenerate_id(true);
-            redirect('/constructioninnagpur/admin/dashboard.php');
+            redirect(SITE_URL . '/admin/dashboard.php');
         } else {
             $error_message = 'Invalid username or password.';
             // Clear password for security
@@ -464,7 +465,7 @@ $page_title = 'Admin Login';
             </form>
             
             <div class="login-links">
-                <a href="/constructioninnagpur/index.php">
+                <a href="<?php echo SITE_URL; ?>/index.php">
                     <i data-feather="arrow-left"></i> 
                     Back to Website
                 </a>

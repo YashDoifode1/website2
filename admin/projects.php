@@ -9,6 +9,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/upload.php';
+require_once __DIR__ . '/../config.php';
 
 requireAdmin();
 
@@ -135,7 +136,7 @@ if ($action === 'list') {
             completed_on DESC, created_at DESC
     ");
     $raw = $stmt->fetchAll();
-    $basePath = '/constructioninnagpur';
+    $basePath = rtrim(SITE_URL, '/');
 
     foreach ($raw as $p) {
         $p['thumbnail'] = getProjectThumbnail((int)$p['id'], $basePath);

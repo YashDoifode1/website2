@@ -10,6 +10,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/upload.php';
+require_once __DIR__ . '/../config.php';
 
 requireAdmin();
 
@@ -289,7 +290,7 @@ require_once __DIR__ . '/includes/admin_header.php';
                 <?php if ($article && $article['featured_image'] && $article['featured_image'] !== 'blog-default.jpg'): ?>
                     <div class="current-image" style="margin-top: 1rem;">
                         <p style="font-size: 0.875rem; color: #64748b; margin-bottom: 0.5rem;">Current Image:</p>
-                        <img src="/constructioninnagpur/assets/images/<?= sanitizeOutput($article['featured_image']) ?>" 
+                        <img src="<?= SITE_URL ?>/assets/images/<?= sanitizeOutput($article['featured_image']) ?>" 
                              alt="Current" 
                              style="max-width: 300px; border-radius: 8px; border: 2px solid #e2e8f0;">
                     </div>

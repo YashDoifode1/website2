@@ -1,12 +1,13 @@
 <?php
 /**
- * blog.php – Blog & Insights
- * Fully aligned, responsive, no DB errors
+ * Blog Listing Page – Grand Jyothi Construction
+ * HERO BANNER 100% MATCHES services.php
  */
 
 declare(strict_types=1);
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/security.php';
+require_once __DIR__ . '/config.php';
 
 $page_title = 'Blog & Insights | Grand Jyothi Construction';
 
@@ -18,30 +19,34 @@ $per_page        = 6;
 $offset          = ($page - 1) * $per_page;
 
 // ---------- 2. Build query ----------
-$sql    = "SELECT id, title, excerpt, featured_image, category, author, created_at 
-           FROM blog_articles 
-           WHERE 1=1";
+$sql = "SELECT * FROM blog_articles WHERE is_published = 1";
 $params = [];
 
+if ($search_term !== '') {
+    $sql .= " AND (title LIKE ? OR content LIKE ? OR excerpt LIKE ? OR tags LIKE ?)";
+    $pattern = "%$search_term%";
+    $params = array_merge($params, array_fill(0, 4, $pattern));
+}
 if ($category_filter !== '') {
     $sql .= " AND category = ?";
     $params[] = $category_filter;
 }
+
+// Count total
+$count_sql = "SELECT COUNT(*) FROM blog_articles WHERE is_published = 1";
+$count_params = [];
 if ($search_term !== '') {
-    $sql .= " AND (title LIKE ? OR excerpt LIKE ? OR content LIKE ?)";
-    $pattern = "%$search_term%";
-    $params = array_merge($params, [$pattern, $pattern, $pattern]);
+    $count_sql .= " AND (title LIKE ? OR content LIKE ? OR excerpt LIKE ? OR tags LIKE ?)";
+    $count_params = array_merge($count_params, array_fill(0, 4, $pattern));
 }
-
-$count_sql = "SELECT COUNT(*) FROM blog_articles WHERE 1=1" . substr($sql, strpos($sql, 'WHERE') + 5, strpos($sql, 'FROM') - strpos($sql, 'WHERE') - 5);
-if (!empty($params)) {
-    $count_stmt = executeQuery($count_sql, array_slice($params, 0, count($params) - (strpos($sql, 'LIKE') !== false ? 3 : 1)));
-} else {
-    $count_stmt = executeQuery($count_sql);
+if ($category_filter !== '') {
+    $count_sql .= " AND category = ?";
+    $count_params[] = $category_filter;
 }
-$total_articles = (int)$count_stmt->fetchColumn();
-$total_pages = max(1, ceil($total_articles / $per_page));
+$total_articles = (int)executeQuery($count_sql, $count_params)->fetchColumn();
+$total_pages = max(1, (int)ceil($total_articles / $per_page));
 
+// Final query
 $sql .= " ORDER BY created_at DESC LIMIT ? OFFSET ?";
 $params[] = $per_page;
 $params[] = $offset;
@@ -52,15 +57,16 @@ $articles = executeQuery($sql, $params)->fetchAll();
 $categories = executeQuery("
     SELECT category, COUNT(*) as count 
     FROM blog_articles 
-    WHERE category IS NOT NULL AND category != '' 
+    WHERE is_published = 1 AND category IS NOT NULL AND category != '' 
     GROUP BY category 
     ORDER BY category
 ")->fetchAll();
 
 // ---------- 4. Popular posts ----------
 $popular_posts = executeQuery("
-    SELECT id, title, featured_image, created_at 
+    SELECT title, slug, featured_image, created_at 
     FROM blog_articles 
+    WHERE is_published = 1 
     ORDER BY created_at DESC 
     LIMIT 3
 ")->fetchAll();
@@ -75,6 +81,7 @@ require_once __DIR__ . '/includes/header.php';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= sanitizeOutput($page_title) ?></title>
 
+    <!-- Bootstrap + Icons + Fonts -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
@@ -87,14 +94,18 @@ require_once __DIR__ . '/includes/header.php';
         body{font-family:'Roboto',sans-serif;color:var(--charcoal);background:var(--white);line-height:1.6;}
         h1,h2,h3,h4,h5,h6{font-family:'Poppins',sans-serif;font-weight:600;}
 
-        /* ==== HERO ==== */
+        /* ==== HERO - EXACTLY LIKE services.php ==== */
         .blog-banner{
-            height:500px;background:linear-gradient(rgba(26,26,26,.7),rgba(26,26,26,.7)),
+            height:500px;
+            background:linear-gradient(rgba(26,26,26,.7),rgba(26,26,26,.7)),
             url('https://images.unsplash.com/photo-1541888946425-d81bb19240f5?ixlib=rb-4.0.3&auto=format&fit=crop&w=1770&q=80')
-            center/cover no-repeat;display:flex;align-items:flex-end;padding:60px 0;color:var(--white);position:relative;
+            center/cover no-repeat;
+            display:flex;align-items:flex-end;padding:60px 0;color:var(--white);position:relative;
         }
-        .blog-banner::before{content:'';position:absolute;inset:0;
-            background:linear-gradient(135deg,rgba(249,168,38,.15) 0%,transparent 70%);}
+        .blog-banner::before{
+            content:'';position:absolute;inset:0;
+            background:linear-gradient(135deg,rgba(249,168,38,.15) 0%,transparent 70%);
+        }
         .banner-title{font-size:3rem;margin:0;line-height:1.2;}
         .banner-subtitle{font-size:1.2rem;opacity:.9;margin-bottom:1.5rem;}
 
@@ -106,18 +117,20 @@ require_once __DIR__ . '/includes/header.php';
         /* ==== SEARCH ==== */
         .hero-search{max-width:500px;margin:0 auto;position:relative;}
         .hero-search input{width:100%;padding:14px 50px 14px 20px;border-radius:50px;border:none;font-size:1rem;}
-        .hero-search button{position:absolute;right:8px;top:8px;background:var(--primary-yellow);
+        .hero-search button{
+            position:absolute;right:8px;top:8px;background:var(--primary-yellow);
             border:none;color:var(--charcoal);width:40px;height:40px;border-radius:50%;
-            display:flex;align-items:center;justify-content:center;font-size:1.1rem;}
+            display:flex;align-items:center;justify-content:center;font-size:1.1rem;
+        }
 
-        /* ==== BLOG SECTION ==== */
+        /* ==== SECTION ==== */
         .blog-section{padding:80px 0;background:var(--light-gray);}
         .section-title{font-size:1.8rem;margin-bottom:30px;padding-bottom:10px;
             border-bottom:3px solid var(--primary-yellow);display:inline-block;position:relative;}
         .section-title::after{content:'';position:absolute;bottom:-12px;left:0;
             width:60px;height:4px;background:var(--primary-yellow);border-radius:2px;}
 
-        /* ==== GRID ==== */
+        /* ==== BLOG GRID ==== */
         .blog-grid{
             display:grid;
             grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
@@ -130,35 +143,43 @@ require_once __DIR__ . '/includes/header.php';
             display:flex;flex-direction:column;height:100%;
         }
         .blog-card:hover{transform:translateY(-8px);box-shadow:0 15px 30px rgba(0,0,0,.12);}
-        .blog-image{height:200px;overflow:hidden;position:relative;}
+        .blog-image{height:140px;overflow:hidden;position:relative;}
         .blog-image img{width:100%;height:100%;object-fit:cover;transition:transform .5s;}
-        .blog-card:hover .blog-image img{transform:scale(1.06);}
+        .blog-card:hover .blog-image img{transform:scale(1.05);}
         .blog-category{
             position:absolute;top:12px;left:12px;background:var(--primary-yellow);
             color:var(--charcoal);padding:4px 12px;border-radius:20px;font-size:.75rem;font-weight:600;
         }
-        .blog-content{padding:22px;flex:1;display:flex;flex-direction:column;}
-        .blog-title{font-size:1.25rem;margin:0 0 12px;line-height:1.3;}
-        .blog-title a{color:inherit;text-decoration:none;transition:color .3s;}
+        .blog-content{padding:20px;flex:1;display:flex;flex-direction:column;}
+        .blog-title{font-size:1.3rem;margin:0 0 10px;line-height:1.3;}
+        .blog-title a{color:var(--charcoal);text-decoration:none;transition:color .3s;}
         .blog-card:hover .blog-title a{color:var(--primary-yellow);}
-        .blog-excerpt{color:#555;font-size:.94rem;margin-bottom:15px;flex:1;}
-        .blog-meta{display:flex;justify-content:space-between;font-size:.85rem;color:#777;margin-bottom:12px;}
-        .blog-author,.blog-date{display:flex;align-items:center;gap:4px;}
-        .blog-author i,.blog-date i{color:var(--primary-yellow);}
+        .blog-excerpt{color:#555;font-size:.94rem;line-height:1.5;margin-bottom:15px;flex:1;}
+        .blog-meta{
+            display:flex;justify-content:space-between;align-items:center;
+            font-size:.85rem;color:#888;margin-top:auto;
+        }
+        .blog-author,.blog-date{display:flex;align-items:center;}
+        .blog-author i,.blog-date i{margin-right:5px;color:var(--primary-yellow);}
 
-        /* ==== SIDEBAR ==== */
+        /* ==== SIDEBAR (LEFT) ==== */
         .sidebar{background:var(--white);border-radius:12px;padding:28px;
             box-shadow:0 6px 20px rgba(0,0,0,.05);margin-bottom:30px;}
         .sidebar-title{font-size:1.2rem;margin-bottom:18px;padding-bottom:8px;
             border-bottom:2px solid var(--primary-yellow);display:inline-block;}
         .search-box{position:relative;margin-bottom:25px;}
         .search-box input{width:100%;padding:12px 45px 12px 16px;border-radius:50px;border:1px solid #ddd;font-size:.95rem;}
-        .search-box button{position:absolute;right:6px;top:6px;background:var(--primary-yellow);
+        .search-box button{
+            position:absolute;right:6px;top:6px;background:var(--primary-yellow);
             border:none;color:var(--charcoal);width:36px;height:36px;border-radius:50%;
-            display:flex;align-items:center;justify-content:center;font-size:1rem;}
+            display:flex;align-items:center;justify-content:center;font-size:1rem;
+        }
         .category-list{list-style:none;padding:0;margin:0;}
-        .category-list a{display:flex;justify-content:space-between;align-items:center;
-            padding:10px 0;color:var(--charcoal);text-decoration:none;border-bottom:1px solid #eee;font-size:.95rem;}
+        .category-list a{
+            display:flex;justify-content:space-between;align-items:center;
+            padding:10px 0;color:var(--charcoal);text-decoration:none;
+            border-bottom:1px solid #eee;font-size:.95rem;
+        }
         .category-list a:hover,.category-list a.active{color:var(--primary-yellow);font-weight:600;}
         .category-count{background:var(--charcoal);color:var(--white);padding:2px 8px;
             border-radius:10px;font-size:.75rem;}
@@ -169,7 +190,6 @@ require_once __DIR__ . '/includes/header.php';
         .popular-post-image img{width:100%;height:100%;object-fit:cover;}
         .popular-post-title a{color:var(--charcoal);font-weight:500;text-decoration:none;font-size:.95rem;line-height:1.3;}
         .popular-post-title a:hover{color:var(--primary-yellow);}
-        .popular-post-meta{font-size:.8rem;color:#888;margin-top:4px;}
 
         /* ==== PAGINATION ==== */
         .pagination{justify-content:center;margin-top:50px;}
@@ -182,11 +202,11 @@ require_once __DIR__ . '/includes/header.php';
         .no-posts-icon{font-size:4rem;color:#ddd;margin-bottom:20px;}
 
         /* ==== FLOATING BUTTONS ==== */
-        .floating-buttons{position:fixed;bottom:30px;right:30px;z-index:1000;display:flex;flex-direction:column;gap:12px;}
-        .floating-btn{width:56px;height:56px;border-radius:50%;display:flex;
+        .floating-buttons{position:fixed;bottom:30px;right:30px;z-index:1000;display:flex;flex-direction:column;gap:15px;}
+        .floating-btn{width:60px;height:60px;border-radius:50%;display:flex;
             align-items:center;justify-content:center;color:var(--white);
-            font-size:1.4rem;box-shadow:0 6px 20px rgba(0,0,0,.2);transition:all .3s;}
-        .floating-btn:hover{transform:translateY(-4px);box-shadow:0 10px 25px rgba(0,0,0,.3);}
+            font-size:1.6rem;box-shadow:0 6px 20px rgba(0,0,0,.2);transition:all .3s;}
+        .floating-btn:hover{transform:translateY(-5px);}
         .whatsapp-btn{background:#25D366;}
         .call-btn{background:var(--primary-yellow);color:var(--charcoal);}
 
@@ -199,29 +219,29 @@ require_once __DIR__ . '/includes/header.php';
         @media (max-width:992px){
             .blog-banner{height:400px;padding:40px 0;}
             .banner-title{font-size:2.4rem;}
-            .blog-section .row{flex-direction:column-reverse;}
+            .blog-section .row{flex-direction:column;}
             .blog-grid{grid-template-columns:1fr;}
         }
         @media (max-width:576px){
             .banner-title{font-size:2rem;}
-            .floating-buttons{bottom:20px;right:20px;gap:10px;}
-            .floating-btn{width:50px;height:50px;font-size:1.2rem;}
+            .floating-buttons{bottom:20px;right:20px;gap:12px;}
+            .floating-btn{width:50px;height:50px;font-size:1.3rem;}
         }
     </style>
 </head>
 <body>
 
-<!-- ====================== HERO ====================== -->
+<!-- ====================== HERO (MATCHES services.php) ====================== -->
 <section class="blog-banner">
     <div class="container">
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/constructioninnagpur/">Home</a></li>
+                <li class="breadcrumb-item"><a href="<?= SITE_URL ?>/">Home</a></li>
                 <li class="breadcrumb-item active" aria-current="page">Blog</li>
             </ol>
         </nav>
         <h1 class="banner-title">Our Blog & Insights</h1>
-        <p class="banner-subtitle">Expert tips, trends, and construction advice for your dream home.</p>
+        <p class="banner-subtitle">Expert advice, construction tips, and industry insights to help you build your dream home with confidence.</p>
         <form action="" method="get" class="hero-search">
             <input type="text" name="search" placeholder="Search articles..." value="<?= sanitizeOutput($search_term) ?>">
             <?php if ($category_filter): ?>
@@ -232,15 +252,80 @@ require_once __DIR__ . '/includes/header.php';
     </div>
 </section>
 
-<!-- ====================== MAIN + SIDEBAR ====================== -->
+<!-- ====================== MAIN + SIDEBAR (LEFT) ====================== -->
 <main class="blog-section">
     <div class="container">
         <div class="row g-5">
 
-            <!-- ==== MAIN: Blog Grid ==== -->
-            <div class="col-lg-9 order-lg-2">
+            <!-- ==== SIDEBAR (LEFT) ==== -->
+            <aside class="col-lg-3">
+                <div class="sticky-top" style="top:90px;">
 
-                <div class="blog-grid" id="blogPosts">
+                    <!-- SEARCH -->
+                    <div class="sidebar">
+                        <h3 class="sidebar-title">Search Blog</h3>
+                        <form action="" method="get" class="search-box">
+                            <input type="text" name="search" placeholder="Search articles..." value="<?= sanitizeOutput($search_term) ?>">
+                            <?php if ($category_filter): ?>
+                                <input type="hidden" name="category" value="<?= sanitizeOutput($category_filter) ?>">
+                            <?php endif; ?>
+                            <button type="submit"><i class="fas fa-search"></i></button>
+                        </form>
+                    </div>
+
+                    <!-- CATEGORIES -->
+                    <div class="sidebar">
+                        <h3 class="sidebar-title">Categories</h3>
+                        <ul class="category-list">
+                            <li>
+                                <a href="<?= SITE_URL ?>/blog.php" class="<?= empty($category_filter) && empty($search_term) ? 'active' : '' ?>">
+                                    <span>All Articles</span>
+                                    <span class="category-count"><?= $total_articles ?></span>
+                                </a>
+                            </li>
+                            <?php foreach ($categories as $cat): ?>
+                                <li>
+                                    <a href="?category=<?= urlencode($cat['category']) ?>&search=<?= urlencode($search_term) ?>"
+                                       class="<?= $category_filter === $cat['category'] ? 'active' : '' ?>">
+                                        <span><?= sanitizeOutput(ucfirst($cat['category'])) ?></span>
+                                        <span class="category-count"><?= $cat['count'] ?></span>
+                                    </a>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+
+                    <!-- POPULAR POSTS -->
+                    <div class="sidebar">
+                        <h3 class="sidebar-title">Popular Posts</h3>
+                        <?php foreach ($popular_posts as $post): ?>
+                            <div class="popular-post">
+                                <?php if (!empty($post['featured_image'])): ?>
+                                    <div class="popular-post-image">
+                                        <img src="<?= SITE_URL ?>/assets/images/<?= sanitizeOutput($post['featured_image']) ?>" 
+                                             alt="<?= sanitizeOutput($post['title']) ?>" loading="lazy">
+                                    </div>
+                                <?php endif; ?>
+                                <div class="popular-post-content">
+                                    <div class="popular-post-title">
+                                        <a href="<?= SITE_URL ?>/blog-detail.php?slug=<?= sanitizeOutput($post['slug']) ?>">
+                                            <?= sanitizeOutput($post['title']) ?>
+                                        </a>
+                                    </div>
+                                    <div class="text-muted small">
+                                        <?= date('d M Y', strtotime($post['created_at'])) ?>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+
+                </div>
+            </aside>
+
+            <!-- ==== MAIN: Blog Grid (RIGHT) ==== -->
+            <div class="col-lg-9">
+                <div class="blog-grid" id="blogGrid">
                     <?php if (empty($articles)): ?>
                         <div class="no-posts">
                             <div class="no-posts-icon"><i class="fas fa-file-alt"></i></div>
@@ -248,38 +333,38 @@ require_once __DIR__ . '/includes/header.php';
                             <p>Try adjusting your search or filter criteria.</p>
                         </div>
                     <?php else: ?>
-                        <?php foreach ($articles as $article): ?>
-                            <article class="blog-card">
-                                <?php if ($article['featured_image']): ?>
-                                    <div class="blog-image">
-                                        <img src="/constructioninnagpur/assets/images/<?= sanitizeOutput($article['featured_image']) ?>"
-                                             alt="<?= sanitizeOutput($article['title']) ?>"
-                                             loading="lazy">
-                                        <?php if ($article['category']): ?>
-                                            <div class="blog-category"><?= sanitizeOutput($article['category']) ?></div>
-                                        <?php endif; ?>
-                                    </div>
-                                <?php endif; ?>
+                        <?php foreach ($articles as $article): 
+    $img = !empty($article['featured_image']) 
+        ? SITE_URL . '/assets/images/' . sanitizeOutput($article['featured_image'])
+        : 'https://via.placeholder.com/300x140/eee/ccc?text=Blog';
+?>
 
+                            <article class="blog-card">
+                                <div class="blog-image">
+                                    <img src="<?= $img ?>" alt="<?= sanitizeOutput($article['title']) ?>" loading="lazy">
+                                    <?php if ($article['category']): ?>
+                                        <div class="blog-category"><?= sanitizeOutput($article['category']) ?></div>
+                                    <?php endif; ?>
+                                </div>
                                 <div class="blog-content">
                                     <h3 class="blog-title">
-                                        <a href="/constructioninnagpur/blog-detail.php?id=<?= (int)$article['id'] ?>">
+                                        <a href="<?= SITE_URL ?>/blog-detail.php?slug=<?= sanitizeOutput($article['slug']) ?>">
                                             <?= sanitizeOutput($article['title']) ?>
                                         </a>
                                     </h3>
                                     <?php if ($article['excerpt']): ?>
-                                        <p class="blog-excerpt"><?= sanitizeOutput($article['excerpt']) ?></p>
+                                        <p class="blog-excerpt"><?= sanitizeOutput(substr(strip_tags($article['excerpt']), 0, 120)) ?>...</p>
                                     <?php endif; ?>
                                     <div class="blog-meta">
                                         <div class="blog-author">
-                                            <i class="fas fa-user"></i> <?= sanitizeOutput($article['author'] ?? 'Admin') ?>
+                                            <i class="fas fa-user"></i> <?= sanitizeOutput($article['author']) ?>
                                         </div>
                                         <div class="blog-date">
                                             <i class="fas fa-calendar"></i> <?= date('d M Y', strtotime($article['created_at'])) ?>
                                         </div>
                                     </div>
-                                    <a href="/constructioninnagpur/blog-detail.php?id=<?= (int)$article['id'] ?>" 
-                                       class="btn btn-primary btn-sm">Read More</a>
+                                    <a href="<?= SITE_URL ?>/blog-detail.php?slug=<?= sanitizeOutput($article['slug']) ?>" 
+                                       class="btn btn-primary btn-sm mt-2">Read More</a>
                                 </div>
                             </article>
                         <?php endforeach; ?>
@@ -304,81 +389,17 @@ require_once __DIR__ . '/includes/header.php';
                     </ul>
                 </nav>
                 <?php endif; ?>
-
             </div>
-
-            <!-- ==== SIDEBAR ==== -->
-            <aside class="col-lg-3 order-lg-1">
-                <div class="sticky-top" style="top:90px;">
-
-                    <!-- SEARCH -->
-                    <div class="sidebar">
-                        <h3 class="sidebar-title">Search Blog</h3>
-                        <form action="" method="get" class="search-box">
-                            <input type="text" name="search" placeholder="Search articles..." value="<?= sanitizeOutput($search_term) ?>">
-                            <?php if ($category_filter): ?>
-                                <input type="hidden" name="category" value="<?= sanitizeOutput($category_filter) ?>">
-                            <?php endif; ?>
-                            <button type="submit"><i class="fas fa-search"></i></button>
-                        </form>
-                    </div>
-
-                    <!-- CATEGORIES -->
-                    <div class="sidebar">
-                        <h3 class="sidebar-title">Categories</h3>
-                        <ul class="category-list">
-                            <li><a href="/constructioninnagpur/blog.php" class="<?= empty($category_filter) ? 'active' : '' ?>">
-                                <span>All Articles</span>
-                                <span class="category-count"><?= $total_articles ?></span>
-                            </a></li>
-                            <?php foreach ($categories as $cat): ?>
-                                <li><a href="?category=<?= urlencode($cat['category']) ?>&search=<?= urlencode($search_term) ?>"
-                                       class="<?= $category_filter === $cat['category'] ? 'active' : '' ?>">
-                                    <span><?= sanitizeOutput($cat['category']) ?></span>
-                                    <span class="category-count"><?= $cat['count'] ?></span>
-                                </a></li>
-                            <?php endforeach; ?>
-                        </ul>
-                    </div>
-
-                    <!-- POPULAR POSTS -->
-                    <div class="sidebar">
-                        <h3 class="sidebar-title">Popular Posts</h3>
-                        <?php foreach ($popular_posts as $post): ?>
-                            <div class="popular-post">
-                                <?php if ($post['featured_image']): ?>
-                                    <div class="popular-post-image">
-                                        <img src="/constructioninnagpur/assets/images/<?= sanitizeOutput($post['featured_image']) ?>" 
-                                             alt="<?= sanitizeOutput($post['title']) ?>">
-                                    </div>
-                                <?php endif; ?>
-                                <div class="popular-post-content">
-                                    <div class="popular-post-title">
-                                        <a href="/constructioninnagpur/blog-detail.php?id=<?= (int)$post['id'] ?>">
-                                            <?= sanitizeOutput($post['title']) ?>
-                                        </a>
-                                    </div>
-                                    <div class="popular-post-meta">
-                                        <?= date('d M Y', strtotime($post['created_at'])) ?>
-                                    </div>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-
-                </div>
-            </aside>
-
         </div>
     </div>
 </main>
 
 <!-- ====================== FLOATING BUTTONS ====================== -->
 <div class="floating-buttons">
-    <a href="https://wa.me/+919075956483" target="_blank" class="floating-btn whatsapp-btn" title="Chat on WhatsApp">
+    <a href="https://wa.me/919876543210" target="_blank" class="floating-btn whatsapp-btn" title="Chat on WhatsApp">
         <i class="fab fa-whatsapp"></i>
     </a>
-    <a href="tel:+919075956483" class="floating-btn call-btn" title="Call Us">
+    <a href="tel:+919876543210" class="floating-btn call-btn" title="Call Us">
         <i class="fas fa-phone"></i>
     </a>
 </div>
@@ -391,10 +412,10 @@ require_once __DIR__ . '/includes/header.php';
                 <h2 class="display-5 fw-bold mb-4">Stay Updated with Construction Tips</h2>
                 <p class="lead mb-4">Subscribe to our blog for the latest insights, trends, and expert advice.</p>
                 <div class="d-flex justify-content-center gap-3 flex-wrap">
-                    <a href="/constructioninnagpur/contact.php" class="btn btn-primary btn-lg">
+                    <a href="<?= SITE_URL ?>/contact.php" class="btn btn-primary btn-lg">
                         Get Free Consultation
                     </a>
-                    <a href="/constructioninnagpur/packages.php" class="btn btn-outline-light btn-lg">
+                    <a href="<?= SITE_URL ?>/packages.php" class="btn btn-outline-light btn-lg">
                         View Packages
                     </a>
                 </div>

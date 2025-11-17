@@ -1,13 +1,14 @@
 <?php
 /**
- * Blog Detail Page - Modern Design (FINAL)
- * 
- * Fully updated with sidebar fixes, category counts, active state, and all features.
+ * Blog Detail Page - Modern Design (FINAL + FULL COMMENTS SYSTEM)
+ * Fully updated with SITE_URL, sidebar fixes, category counts, active state
+ * + Complete comment system with nested replies
  */
 
 declare(strict_types=1);
 
 require_once __DIR__ . '/includes/db.php';
+require_once __DIR__ . '/config.php'; // For SITE_URL
 
 // Helper: Get current URL for social sharing
 if (!function_exists('currentUrl')) {
@@ -20,21 +21,23 @@ if (!function_exists('currentUrl')) {
 $slug = $_GET['slug'] ?? '';
 
 if (empty($slug)) {
-    header('Location: /constructioninnagpur/blog.php');
+    header("Location: " . SITE_URL . "/blog.php");
     exit;
 }
 
-// Fetch the article with related count
+// -----------------------
+// Fetch Article
+// -----------------------
 $sql = "SELECT * FROM blog_articles WHERE slug = ? AND is_published = 1";
 $article = executeQuery($sql, [$slug])->fetch();
 
 if (!$article) {
-    header('HTTP/1.0 404 Not Found');
+    http_response_code(404);
     echo "<h1>404 - Article Not Found</h1>";
     exit;
 }
 
-$page_title = $article['title'] . ' | BuildDream Construction';
+$page_title = sanitizeOutput($article['title']) . ' | Grand Jyothi Construction';
 
 // Increment view count
 executeQuery("UPDATE blog_articles SET views = views + 1 WHERE id = ?", [$article['id']]);
@@ -44,7 +47,9 @@ $article['views']++;
 $word_count = str_word_count(strip_tags($article['content']));
 $reading_time = max(1, ceil($word_count / 200));
 
-// Related articles (same category)
+// -----------------------
+// Related Articles
+// -----------------------
 $related_articles = executeQuery("
     SELECT title, slug, featured_image, created_at 
     FROM blog_articles 
@@ -53,7 +58,7 @@ $related_articles = executeQuery("
     LIMIT 3
 ", [$article['category'], $article['id']])->fetchAll();
 
-// Previous / Next posts (same category)
+// Previous / Next posts
 $prev_post = executeQuery("
     SELECT title, slug 
     FROM blog_articles 
@@ -79,10 +84,10 @@ $categories = executeQuery("
     ORDER BY category
 ")->fetchAll();
 
-// Total published articles (for "All Articles")
+// Total published articles
 $total_articles = executeQuery("SELECT COUNT(*) FROM blog_articles WHERE is_published = 1")->fetchColumn();
 
-// Popular posts (by views)
+// Popular posts
 $popular_posts = executeQuery("
     SELECT title, slug, featured_image, created_at 
     FROM blog_articles 
@@ -90,6 +95,123 @@ $popular_posts = executeQuery("
     ORDER BY views DESC, created_at DESC 
     LIMIT 3
 ")->fetchAll();
+
+// -----------------------
+// COMMENT SYSTEM
+// -----------------------
+
+$comment_error = $comment_success = '';
+
+// Process comment submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['comment'])) {
+    // Honeypot check
+    if (!empty($_POST['website'])) {
+        $comment_error = "Spam detected.";
+    } else {
+        $name    = trim($_POST['name'] ?? '');
+        $email   = trim($_POST['email'] ?? '');
+        $comment = trim($_POST['comment'] ?? '');
+        $parent_id = !empty($_POST['parent_id']) ? (int)$_POST['parent_id'] : null;
+
+        if ($name && $email && $comment && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $sql = "INSERT INTO blog_comments 
+                    (article_id, parent_id, name, email, comment, created_at, is_approved) 
+                    VALUES (?, ?, ?, ?, ?, NOW(), 1)";
+            $stmt = executeQuery($sql, [
+                $article['id'],
+                $parent_id,
+                $name,
+                $email,
+                $comment
+            ]);
+
+            if ($stmt->rowCount()) {
+                $comment_success = "Thank you! Your comment has been posted.";
+            } else {
+                $comment_error = "Failed to post comment. Please try again.";
+            }
+        } else {
+            $comment_error = "Please fill all fields correctly.";
+        }
+    }
+}
+
+// Fetch comments (recursive)
+function fetchComments(int $article_id, $parent_id = null): array {
+    $sql = "SELECT c.*, 
+                   (SELECT COUNT(*) FROM blog_comments WHERE parent_id = c.id AND is_approved = 1) AS reply_count
+            FROM blog_comments c 
+            WHERE article_id = ? AND parent_id " . ($parent_id === null ? "IS NULL" : "= ?") . " AND is_approved = 1
+            ORDER BY created_at DESC";
+    $params = $parent_id === null ? [$article_id] : [$article_id, $parent_id];
+    return executeQuery($sql, $params)->fetchAll();
+}
+
+$comments = fetchComments((int)$article['id']);
+
+// Render comment (recursive)
+function renderComment($comment, $level = 0) {
+    $indent = $level * 40;
+    ?>
+    <div class="comment-item" style="margin-left: <?= $indent ?>px; border-left: <?= $level > 0 ? '2px solid #eee' : 'none' ?>; padding-left: <?= $level > 0 ? '20px' : '0' ?>;">
+        <div class="comment-header d-flex justify-content-between align-items-start">
+            <div>
+                <strong class="comment-author"><?= sanitizeOutput($comment['name']) ?></strong>
+                <small class="text-muted ms-2">
+                    <?= date('d M Y \a\t g:i A', strtotime($comment['created_at'])) ?>
+                </small>
+            </div>
+        </div>
+        <div class="comment-body mt-2">
+            <?= nl2br(sanitizeOutput($comment['comment'])) ?>
+        </div>
+        <div class="comment-actions mt-2">
+            <button class="btn-reply btn btn-sm text-primary p-0" 
+                    data-parent="<?= $comment['id'] ?>" 
+                    data-name="<?= sanitizeOutput($comment['name']) ?>">
+                Reply
+            </button>
+            <?php if ($comment['reply_count'] > 0): ?>
+                <span class="text-muted ms-3">
+                    <i class="fas fa-comments"></i> <?= $comment['reply_count'] ?> repl<?= $comment['reply_count'] > 1 ? 'ies' : 'y' ?>
+                </span>
+            <?php endif; ?>
+        </div>
+
+        <!-- Reply Form -->
+        <div class="reply-form mt-3" style="display: none;" id="reply-form-<?= $comment['id'] ?>">
+            <form action="" method="post" class="small">
+                <input type="hidden" name="parent_id" value="<?= $comment['id'] ?>">
+                <input type="hidden" name="article_id" value="<?= $comment['article_id'] ?>">
+                <div class="row g-2">
+                    <div class="col-md-6">
+                        <input type="text" name="name" class="form-control form-control-sm" placeholder="Your Name *" required>
+                    </div>
+                    <div class="col-md-6">
+                        <input type="email" name="email" class="form-control form-control-sm" placeholder="Your Email *" required>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <textarea name="comment" class="form-control form-control-sm" rows="2" placeholder="Write a reply..." required></textarea>
+                </div>
+                <div class="mt-2 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary btn-sm">Post Reply</button>
+                    <button type="button" class="btn btn-secondary btn-sm cancel-reply">Cancel</button>
+                </div>
+                <input type="text" name="website" style="display:none;">
+            </form>
+        </div>
+
+        <!-- Render Replies -->
+        <?php
+        $replies = fetchComments((int)$comment['article_id'], (int)$comment['id']);
+        foreach ($replies as $reply) {
+            renderComment($reply, $level + 1);
+        }
+        ?>
+    </div>
+    <?php
+}
 
 require_once __DIR__ . '/includes/header.php';
 ?>
@@ -100,9 +222,12 @@ require_once __DIR__ . '/includes/header.php';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= $page_title ?></title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <!-- Bootstrap + Icons + Fonts -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+
     <style>
         :root {
             --primary-yellow: #F9A826;
@@ -131,6 +256,7 @@ require_once __DIR__ . '/includes/header.php';
             font-weight: 600;
             padding: 10px 25px;
             border-radius: 8px;
+            transition: .3s;
         }
 
         .btn-primary:hover {
@@ -139,32 +265,11 @@ require_once __DIR__ . '/includes/header.php';
             color: var(--charcoal);
         }
 
-        .navbar {
-            background-color: var(--charcoal);
-            padding: 15px 0;
-        }
-
-        .navbar-brand {
-            font-family: 'Poppins', sans-serif;
-            font-weight: 700;
-            font-size: 1.8rem;
-            color: var(--primary-yellow) !important;
-        }
-
-        .nav-link {
-            color: var(--white) !important;
-            font-weight: 500;
-            margin: 0 10px;
-        }
-
-        .nav-link:hover, .nav-link.active {
-            color: var(--primary-yellow) !important;
-        }
-
+        /* Blog Banner */
         .blog-banner {
             height: 500px;
-            background: linear-gradient(rgba(26, 26, 26, 0.4), rgba(26, 26, 26, 0.4)),
-                        url('<?= $article['featured_image'] ? '/constructioninnagpur/assets/images/' . sanitizeOutput($article['featured_image']) : 'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?ixlib=rb-4.0.3&auto=format&fit=crop&w=1770&q=80' ?>') no-repeat center center;
+            background: linear-gradient(rgba(26, 26, 26, 0.6), rgba(26, 26, 26, 0.6)),
+                        url('<?= $article['featured_image'] ? SITE_URL . '/assets/images/' . sanitizeOutput($article['featured_image']) : 'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?ixlib=rb-4.0.3&auto=format&fit=crop&w=1770&q=80' ?>') no-repeat center center;
             background-size: cover;
             display: flex;
             align-items: flex-end;
@@ -173,8 +278,17 @@ require_once __DIR__ . '/includes/header.php';
             position: relative;
         }
 
+        .blog-banner::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(249,168,38,.15) 0%, transparent 70%);
+        }
+
         .blog-banner-content {
             max-width: 800px;
+            position: relative;
+            z-index: 1;
         }
 
         .blog-title {
@@ -421,6 +535,7 @@ require_once __DIR__ . '/includes/header.php';
             color: #888;
         }
 
+        /* Sidebar */
         .sidebar {
             background-color: var(--light-gray);
             border-radius: 10px;
@@ -484,7 +599,7 @@ require_once __DIR__ . '/includes/header.php';
         }
 
         .category-list a:hover,
-        .category-list a.text-primary {
+        .category-list a.active {
             color: var(--primary-yellow) !important;
             font-weight: 600;
         }
@@ -554,6 +669,7 @@ require_once __DIR__ . '/includes/header.php';
             color: #888;
         }
 
+        /* Comments Section */
         .comments-section {
             margin-top: 60px;
             padding-top: 40px;
@@ -584,6 +700,48 @@ require_once __DIR__ . '/includes/header.php';
             box-shadow: 0 0 0 0.25rem rgba(249, 168, 38, 0.25);
         }
 
+        .comments-count {
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--primary-yellow);
+            display: inline-block;
+        }
+
+        .comment-item {
+            background: #fff;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .comment-author {
+            color: var(--primary-yellow);
+            font-size: 1rem;
+        }
+
+        .comment-body {
+            font-size: 0.95rem;
+            color: #444;
+            line-height: 1.6;
+        }
+
+        .btn-reply {
+            background: none;
+            border: none;
+            padding: 0;
+            font-size: 0.85rem;
+            color: var(--primary-yellow);
+        }
+
+        .reply-form {
+            background: var(--light-gray);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px dashed #ddd;
+        }
+
         @media (max-width: 768px) {
             .blog-banner {
                 height: 400px;
@@ -601,6 +759,9 @@ require_once __DIR__ . '/includes/header.php';
             }
             .nav-post.next a {
                 flex-direction: row;
+            }
+            .comment-item {
+                padding: 12px;
             }
         }
     </style>
@@ -649,7 +810,7 @@ require_once __DIR__ . '/includes/header.php';
                             $tags = array_filter(array_map('trim', explode(',', $article['tags'])));
                             foreach ($tags as $tag): 
                             ?>
-                                <a href="/constructioninnagpur/blog.php?search=<?= urlencode($tag) ?>" class="tag-badge">
+                                <a href="<?= SITE_URL ?>/blog.php?search=<?= urlencode($tag) ?>" class="tag-badge">
                                     #<?= sanitizeOutput($tag) ?>
                                 </a>
                             <?php endforeach; ?>
@@ -677,7 +838,7 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="blog-navigation">
                         <?php if ($prev_post): ?>
                             <div class="nav-post prev">
-                                <a href="/constructioninnagpur/blog-detail.php?slug=<?= sanitizeOutput($prev_post['slug']) ?>">
+                                <a href="<?= SITE_URL ?>/blog-detail.php?slug=<?= sanitizeOutput($prev_post['slug']) ?>">
                                     <div class="nav-icon"><i class="fas fa-arrow-left"></i></div>
                                     <div>
                                         <div class="text-muted">Previous</div>
@@ -689,7 +850,7 @@ require_once __DIR__ . '/includes/header.php';
 
                         <?php if ($next_post): ?>
                             <div class="nav-post next">
-                                <a href="/constructioninnagpur/blog-detail.php?slug=<?= sanitizeOutput($next_post['slug']) ?>">
+                                <a href="<?= SITE_URL ?>/blog-detail.php?slug=<?= sanitizeOutput($next_post['slug']) ?>">
                                     <div class="nav-icon"><i class="fas fa-arrow-right"></i></div>
                                     <div>
                                         <div class="text-muted">Next</div>
@@ -710,13 +871,13 @@ require_once __DIR__ . '/includes/header.php';
                                         <div class="related-post-card">
                                             <?php if ($related['featured_image']): ?>
                                                 <div class="related-post-image">
-                                                    <img src="/constructioninnagpur/assets/images/<?= sanitizeOutput($related['featured_image']) ?>" 
-                                                         alt="<?= sanitizeOutput($related['title']) ?>">
+                                                    <img src="<?= SITE_URL ?>/assets/images/<?= sanitizeOutput($related['featured_image']) ?>" 
+                                                         alt="<?= sanitizeOutput($related['title']) ?>" loading="lazy">
                                                 </div>
                                             <?php endif; ?>
                                             <div class="related-post-content">
                                                 <h4 class="related-post-title">
-                                                    <a href="/constructioninnagpur/blog-detail.php?slug=<?= sanitizeOutput($related['slug']) ?>">
+                                                    <a href="<?= SITE_URL ?>/blog-detail.php?slug=<?= sanitizeOutput($related['slug']) ?>">
                                                         <?= sanitizeOutput($related['title']) ?>
                                                     </a>
                                                 </h4>
@@ -731,11 +892,23 @@ require_once __DIR__ . '/includes/header.php';
                         </div>
                     <?php endif; ?>
 
-                    <!-- Comment Form -->
+                    <!-- Comments Section -->
                     <div class="comments-section">
-                        <h3 class="section-title">Leave a Comment</h3>
+                        <h3 class="section-title">
+                            <span class="comments-count">
+                                <?= count($comments) ?> Comment<?= count($comments) !== 1 ? 's' : '' ?>
+                            </span>
+                        </h3>
+
+                        <?php if ($comment_success): ?>
+                            <div class="alert alert-success"><?= $comment_success ?></div>
+                        <?php elseif ($comment_error): ?>
+                            <div class="alert alert-danger"><?= $comment_error ?></div>
+                        <?php endif; ?>
+
+                        <!-- Main Comment Form -->
                         <div class="comment-form">
-                            <form action="/constructioninnagpur/submit-comment.php" method="post">
+                            <form action="" method="post">
                                 <input type="hidden" name="article_id" value="<?= $article['id'] ?>">
                                 <div class="row">
                                     <div class="col-md-6">
@@ -755,8 +928,20 @@ require_once __DIR__ . '/includes/header.php';
                                     <label for="comment" class="form-label">Comment *</label>
                                     <textarea class="form-control" id="comment" name="comment" rows="5" required></textarea>
                                 </div>
+                                <input type="text" name="website" style="display:none;">
                                 <button type="submit" class="btn btn-primary">Post Comment</button>
                             </form>
+                        </div>
+
+                        <!-- Comments List -->
+                        <div class="comments-list mt-5">
+                            <?php if (empty($comments)): ?>
+                                <p class="text-muted">No comments yet. Be the first to comment!</p>
+                            <?php else: ?>
+                                <?php foreach ($comments as $comment): ?>
+                                    <?php renderComment($comment); ?>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -766,7 +951,7 @@ require_once __DIR__ . '/includes/header.php';
                     <!-- Search -->
                     <div class="sidebar">
                         <h3 class="sidebar-title">Search Blog</h3>
-                        <form action="/constructioninnagpur/blog.php" method="get" class="search-box position-relative">
+                        <form action="<?= SITE_URL ?>/blog.php" method="get" class="search-box position-relative">
                             <input type="text" name="search" placeholder="Search articles..." value="<?= sanitizeOutput($_GET['search'] ?? '') ?>">
                             <button type="submit"><i class="fas fa-search"></i></button>
                         </form>
@@ -777,15 +962,15 @@ require_once __DIR__ . '/includes/header.php';
                         <h3 class="sidebar-title">Categories</h3>
                         <ul class="category-list">
                             <li>
-                                <a href="/constructioninnagpur/blog.php" class="<?= empty($_GET['category']) ? 'text-primary fw-bold' : '' ?>">
+                                <a href="<?= SITE_URL ?>/blog.php" class="<?= empty($_GET['category']) ? 'active' : '' ?>">
                                     <span>All Articles</span>
                                     <span class="category-count"><?= $total_articles ?></span>
                                 </a>
                             </li>
                             <?php foreach ($categories as $cat): ?>
                                 <li>
-                                    <a href="/constructioninnagpur/blog.php?category=<?= urlencode($cat['category']) ?>"
-                                       class="<?= ($_GET['category'] ?? '') === $cat['category'] ? 'text-primary fw-bold' : '' ?>">
+                                    <a href="<?= SITE_URL ?>/blog.php?category=<?= urlencode($cat['category']) ?>"
+                                       class="<?= ($_GET['category'] ?? '') === $cat['category'] ? 'active' : '' ?>">
                                         <span><?= sanitizeOutput($cat['category']) ?></span>
                                         <span class="category-count"><?= $cat['count'] ?></span>
                                     </a>
@@ -802,13 +987,13 @@ require_once __DIR__ . '/includes/header.php';
                                 <li class="popular-post">
                                     <?php if ($post['featured_image']): ?>
                                         <div class="popular-post-image">
-                                            <img src="/constructioninnagpur/assets/images/<?= sanitizeOutput($post['featured_image']) ?>" 
+                                            <img src="<?= SITE_URL ?>/assets/images/<?= sanitizeOutput($post['featured_image']) ?>" 
                                                  alt="<?= sanitizeOutput($post['title']) ?>" loading="lazy">
                                         </div>
                                     <?php endif; ?>
                                     <div class="popular-post-content">
                                         <h4 class="popular-post-title">
-                                            <a href="/constructioninnagpur/blog-detail.php?slug=<?= sanitizeOutput($post['slug']) ?>">
+                                            <a href="<?= SITE_URL ?>/blog-detail.php?slug=<?= sanitizeOutput($post['slug']) ?>">
                                                 <?= sanitizeOutput($post['title']) ?>
                                             </a>
                                         </h4>
@@ -827,6 +1012,30 @@ require_once __DIR__ . '/includes/header.php';
 
     <?php require_once __DIR__ . '/includes/footer.php'; ?>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Toggle reply form
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.btn-reply').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const parentId = btn.getAttribute('data-parent');
+                    const form = document.getElementById('reply-form-' + parentId);
+                    if (form.style.display === 'none' || !form.style.display) {
+                        form.style.display = 'block';
+                        form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    } else {
+                        form.style.display = 'none';
+                    }
+                });
+            });
+
+            document.querySelectorAll('.cancel-reply').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    btn.closest('.reply-form').style.display = 'none';
+                });
+            });
+        });
+    </script>
 </body>
 </html>

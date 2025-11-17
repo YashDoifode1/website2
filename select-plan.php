@@ -2,10 +2,11 @@
 declare(strict_types=1);
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/security.php';
+require_once __DIR__ . '/config.php'; // For SITE_URL
 
 /**
- * select-plan.php – DEBUG VERSION
- * Shows PDO errors & logs the query + parameters.
+ * select-plan.php – PRODUCTION READY
+ * Uses SITE_URL, secure, clean, consistent
  */
 
 $page_title      = 'Select Your Plan | Grand Jyothi Construction';
@@ -95,11 +96,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SERVER['HTTP_USER_AGENT'] ?? null
                 ];
 
-                // ---- DEBUG LOG ----
-                error_log("SELECT-PLAN INSERT → SQL:\n" . $sql);
-                error_log("SELECT-PLAN INSERT → PARAMS: " . json_encode($params, JSON_UNESCAPED_UNICODE));
-
-                // ---- EXECUTE ----
                 executeQuery($sql, $params);
 
                 $success_message = "Thank you for your interest in the <strong>"
@@ -107,17 +103,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                  . "</strong> plan! We'll contact you within 24 hours.";
                 logSecurityEvent("Plan enquiry submitted: $plan", 'INFO');
 
-                // reset form
+                // Reset form
                 $first_name = $last_name = $email = $phone = $project_type = $budget = $message = '';
             } catch (PDOException $e) {
-                // ---- SHOW EXACT ERROR (development only) ----
-                $error_message = 'Error submitting your enquiry: <strong>'
-                               . htmlspecialchars($e->getMessage()) . '</strong>';
-                error_log('Plan Enquiry PDO Error: ' . $e->getMessage()
-                          . ' | SQL: ' . $sql
-                          . ' | Params: ' . json_encode($params));
+                $error_message = 'Error submitting your enquiry. Please try again.';
+                error_log('Plan Enquiry PDO Error: ' . $e->getMessage());
             } catch (Throwable $e) {
-                $error_message = 'Unexpected error: ' . htmlspecialchars($e->getMessage());
+                $error_message = 'Unexpected error. Please try again.';
                 error_log('Plan Enquiry Fatal: ' . $e->getMessage());
             }
         }
@@ -155,80 +147,51 @@ require_once __DIR__ . '/includes/header.php';
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        :root{--primary-yellow:#F9A826;--charcoal:#1A1A1A;--white:#fff;--light-gray:#f8f9fa;}
+        :root{--primary-yellow:#F9A826;--charcoal:#1A1A1A;--white:#fff;--light-gray:#f8f9fa;--radius:12px;}
         body{font-family:'Roboto',sans-serif;color:var(--charcoal);background:var(--white);}
         h1,h2,h3,h4,h5,h6{font-family:'Poppins',sans-serif;font-weight:600;}
-        .btn-primary{background:var(--primary-yellow);border-color:var(--primary-yellow);color:var(--charcoal);font-weight:600;padding:10px 25px;border-radius:8px;}
-        .btn-primary:hover{background:#e89a1f;border-color:#e89a1f;}
+
+        .btn-primary{
+            background:var(--primary-yellow);color:var(--charcoal);border:0;font-weight:600;
+            border-radius:10px;padding:10px 20px;transition:.3s;
+        }
+        .btn-primary:hover{filter:brightness(.98);}
+
         .form-control{padding:12px 15px;border-radius:5px;border:1px solid #ddd;}
         .form-control:focus{border-color:var(--primary-yellow);box-shadow:0 0 0 .25rem rgba(249,168,38,.25);}
-        .sidebar-card{background:var(--light-gray);border-radius:10px;padding:25px;margin-bottom:25px;box-shadow:0 3px 10px rgba(0,0,0,.05);}
-        .sidebar-title{font-size:1.2rem;margin-bottom:20px;padding-bottom:10px;border-bottom:2px solid var(--primary-yellow);display:inline-block;}
-        .search-box{position:relative;}
-        .search-box input{width:100%;padding:12px 40px 12px 15px;border-radius:50px;}
-        .search-box button{position:absolute;right:8px;top:8px;background:var(--primary-yellow);border:none;color:var(--charcoal);width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
-        :root {
-            --primary-yellow: #F9A826;
-            --charcoal: #1A1A1A;
-            --light-gray: #f8f9fa;
-            --radius: 12px;
-        }
-        body {
-            font-family: 'Roboto', sans-serif;
-            color: var(--charcoal);
-            background: #fff;
-        }
-        h1,h2,h3,h4 { font-family:'Poppins',sans-serif; }
 
-        .btn-primary {
-            background: var(--primary-yellow);
-            color: var(--charcoal);
-            border: 0;
-            font-weight: 600;
-            border-radius: 10px;
-            padding: 10px 20px;
+        .hero{
+            background:linear-gradient(rgba(26,26,26,.65),rgba(26,26,26,.65)),
+                       url('https://images.unsplash.com/photo-1541888946425-d81bb19240f5?q=80&w=1600&auto=format&fit=crop') center/cover;
+            color:#fff;padding:70px 0;display:flex;align-items:flex-end;position:relative;
         }
-        .btn-primary:hover { filter: brightness(.98); }
+        .hero::before{content:'';position:absolute;inset:0;
+            background:linear-gradient(135deg,rgba(249,168,38,.15) 0%,transparent 70%);}
 
-        .hero {
-            background: linear-gradient(rgba(26,26,26,.65), rgba(26,26,26,.65)),
-                        url('https://images.unsplash.com/photo-1541888946425-d81bb19240f5?q=80&w=1600&auto=format&fit=crop') center/cover;
-            color: #fff;
-            padding: 70px 0;
-            display: flex;
-            align-items: flex-end;
-        }
-        .hero .breadcrumb a { color: rgba(255,255,255,.85); text-decoration:none; }
+        .hero .breadcrumb a{color:rgba(255,255,255,.85);text-decoration:none;}
+        .hero .breadcrumb-item.active{color:var(--primary-yellow);}
 
-        main.container { padding-bottom: 100px; }
-        .package-card {
-            background: #fff;
-            border-radius: var(--radius);
-            padding: 28px;
-            box-shadow: 0 8px 30px rgba(6,6,6,.06);
-        }
-        .sidebar-card {
-            background: var(--light-gray);
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-        .sticky-sidebar { position: sticky; top: 24px; }
-        @media (max-width: 991px) { .sticky-sidebar { position: static; } }
+        .package-card{background:#fff;border-radius:var(--radius);padding:28px;
+            box-shadow:0 8px 30px rgba(6,6,6,.06);transition:.3s;}
+        .package-card:hover{transform:translateY(-5px);box-shadow:0 15px 35px rgba(0,0,0,.1);}
 
-        .popular-package {
-            display:flex; gap:12px; align-items:center;
-            padding-bottom:12px; border-bottom:1px solid rgba(0,0,0,.04);
-            margin-bottom:12px;
-        }
-        .popular-package:last-child { border-bottom: none; margin-bottom:0; padding-bottom:0; }
-        .popular-thumb {
-            width:64px; height:64px; border-radius:8px; overflow:hidden; flex-shrink:0;
-            background:#eee; display:flex; align-items:center; justify-content:center; color:#aaa;
-        }
-        .feature-list { list-style:none; padding:0; margin:0; }
-        .feature-list li { display:flex; gap:10px; align-items:flex-start; padding:8px 0; color:#555; }
-        .muted { color:#6c757d; }
+        .sidebar-card{background:var(--light-gray);border-radius:10px;padding:20px;margin-bottom:20px;}
+        .sticky-sidebar{position:sticky;top:24px;}
+        @media (max-width:991px){.sticky-sidebar{position:static;}}
+
+        .popular-package{display:flex;gap:12px;align-items:center;padding-bottom:12px;
+            border-bottom:1px solid rgba(0,0,0,.04);margin-bottom:12px;}
+        .popular-package:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0;}
+        .popular-thumb{width:64px;height:64px;border-radius:8px;overflow:hidden;flex-shrink:0;
+            background:#eee;display:flex;align-items:center;justify-content:center;color:#aaa;}
+        .popular-thumb i{font-size:1.5rem;}
+
+        .feature-list{list-style:none;padding:0;margin:0;}
+        .feature-list li{display:flex;gap:10px;align-items:flex-start;padding:8px 0;color:#555;}
+        .feature-list i{color:var(--primary-yellow);width:18px;}
+
+        .muted{color:#6c757d;}
+        .badge.bg-dark{background:var(--charcoal)!important;}
     </style>
 </head>
 <body>
@@ -238,9 +201,9 @@ require_once __DIR__ . '/includes/header.php';
     <div class="container position-relative" style="z-index:2;">
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/" style="color:rgba(255,255,255,.8)">Home</a></li>
-                <li class="breadcrumb-item"><a href="/constructioninnagpur/packages.php" style="color:rgba(255,255,255,.8)">Packages</a></li>
-                <li class="breadcrumb-item active text-warning"><?= $package ? sanitizeOutput($package['title']) : 'Select Plan' ?></li>
+                <li class="breadcrumb-item"><a href="<?= SITE_URL ?>/">Home</a></li>
+                <li class="breadcrumb-item"><a href="<?= SITE_URL ?>/packages.php">Packages</a></li>
+                <li class="breadcrumb-item active" aria-current="page"><?= $package ? sanitizeOutput($package['title']) : 'Select Plan' ?></li>
             </ol>
         </nav>
         <h1 class="display-4 fw-bold"><?= $package ? sanitizeOutput($package['title']) : 'Select Plan' ?></h1>
@@ -264,7 +227,7 @@ require_once __DIR__ . '/includes/header.php';
             <?php if (!$package): ?>
                 <div class="alert alert-warning">
                     No package selected.
-                    <a href="/constructioninnagpur/packages.php" class="alert-link">Choose a package</a> first.
+                    <a href="<?= SITE_URL ?>/packages.php" class="alert-link">Choose a package</a> first.
                 </div>
             <?php else: ?>
 
@@ -345,16 +308,14 @@ require_once __DIR__ . '/includes/header.php';
                         <?php if ($features): ?>
                             <ul class="feature-list mb-3">
                                 <?php foreach ($features as $f): ?>
-                                    <li><i class="fa-solid fa-check" style="color:var(--primary-yellow);width:18px;"></i>
-                                        <?= sanitizeOutput($f) ?>
-                                    </li>
+                                    <li><i class="fa-solid fa-check"></i> <?= sanitizeOutput($f) ?></li>
                                 <?php endforeach; ?>
                             </ul>
                         <?php endif; ?>
                     <?php endif; ?>
 
-                    <div class="d-flex gap-2">
-                        <a href="/constructioninnagpur/contact.php" class="btn btn-outline-dark">Contact Sales</a>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a href="<?= SITE_URL ?>/contact.php" class="btn btn-outline-dark">Contact Sales</a>
                         <a href="#" class="btn btn-primary"
                            onclick="alert('Brochure download coming soon!'); return false;">
                             Download Brochure
@@ -369,7 +330,7 @@ require_once __DIR__ . '/includes/header.php';
             <div class="sticky-sidebar">
                 <!-- Search -->
                 <div class="sidebar-card mb-3">
-                    <form action="/constructioninnagpur/packages.php" method="get">
+                    <form action="<?= SITE_URL ?>/packages.php" method="get">
                         <label class="form-label sidebar-title">Search Packages</label>
                         <div class="input-group">
                             <input type="text" name="search" class="form-control" placeholder="Search packages..."
@@ -386,15 +347,17 @@ require_once __DIR__ . '/includes/header.php';
                         <small class="muted"><?= $total_packages ?> total</small>
                     </div>
                     <ul class="list-unstyled mb-0">
-                        <li><a class="d-flex justify-content-between align-items-center py-2"
-                               href="/constructioninnagpur/packages.php">
-                            <span>All Packages</span>
-                            <span class="badge bg-dark text-white"><?= $total_packages ?></span>
-                        </a></li>
+                        <li>
+                            <a class="d-flex justify-content-between align-items-center py-2"
+                               href="<?= SITE_URL ?>/packages.php">
+                                <span>All Packages</span>
+                                <span class="badge bg-dark text-white"><?= $total_packages ?></span>
+                            </a>
+                        </li>
                         <?php foreach ($categories as $cat): ?>
                             <li>
                                 <a class="d-flex justify-content-between align-items-center py-2"
-                                   href="/constructioninnagpur/packages.php?category=<?= urlencode($cat['cat']) ?>">
+                                   href="<?= SITE_URL ?>/packages.php?category=<?= urlencode($cat['cat']) ?>">
                                     <span><?= ucfirst(sanitizeOutput($cat['cat'])) ?></span>
                                     <span class="badge bg-dark text-white"><?= (int)$cat['cnt'] ?></span>
                                 </a>
@@ -407,7 +370,7 @@ require_once __DIR__ . '/includes/header.php';
                 <div class="sidebar-card mb-3">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <strong>Popular Packages</strong>
-                        <a href="/constructioninnagpur/packages.php" class="muted small">See all</a>
+                        <a href="<?= SITE_URL ?>/packages.php" class="muted small">See all</a>
                     </div>
                     <?php if (empty($popular_packages)): ?>
                         <div class="muted">No packages available.</div>
@@ -416,7 +379,7 @@ require_once __DIR__ . '/includes/header.php';
                             <div class="popular-package">
                                 <div class="popular-thumb"><i class="fa-solid fa-box-open"></i></div>
                                 <div>
-                                    <div><a href="/constructioninnagpur/select-plan.php?plan=<?= urlencode($p['title']) ?>">
+                                    <div><a href="<?= SITE_URL ?>/select-plan.php?plan=<?= urlencode($p['title']) ?>">
                                         <?= sanitizeOutput($p['title']) ?>
                                     </a></div>
                                     <small class="muted">

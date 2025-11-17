@@ -2,12 +2,13 @@
 /**
  * services.php – Our Construction Services
  * Sidebar on LEFT | Main content on RIGHT | 100% aligned with theme
- * FIXED: Correct image paths + Feather Icons
+ * FIXED: Correct image paths + Feather Icons + SITE_URL syntax
  */
 
 declare(strict_types=1);
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/security.php';
+require_once __DIR__ . '/config.php';
 
 $page_title = 'Our Services | Grand Jyothi Construction';
 
@@ -18,7 +19,7 @@ $page            = max(1, (int)($_GET['page'] ?? 1));
 $per_page        = 6;
 $offset          = ($page - 1) * $per_page;
 
-// ---------- 2. Build query ----------
+// ---------- 2. Build query for services ----------
 $sql = "SELECT id, title, description, icon, slug, cover_image, icon_image
         FROM services 
         WHERE 1=1";
@@ -27,19 +28,34 @@ $params = [];
 if ($search_term !== '') {
     $sql .= " AND (title LIKE ? OR description LIKE ?)";
     $pattern = "%$search_term%";
-    $params = array_merge($params, [$pattern, $pattern]);
+    $params[] = $pattern;
+    $params[] = $pattern;
 }
 
-// Count total
-$count_sql = "SELECT COUNT(*) FROM services WHERE 1=1" . substr($sql, strpos($sql, 'WHERE') + 5, strpos($sql, 'FROM') - strpos($sql, 'WHERE') - 5);
-if (!empty($params)) {
-    $count_stmt = executeQuery($count_sql, array_slice($params, 0, count($params) - (strpos($sql, 'LIKE') !== false ? 2 : 0)));
-} else {
-    $count_stmt = executeQuery($count_sql);
+if ($category_filter !== '') {
+    $sql .= " AND title LIKE ?";
+    $params[] = $category_filter . '%';
 }
-$total_services = (int)$count_stmt->fetchColumn();
-$total_pages = max(1, ceil($total_services / $per_page));
 
+// Count total services
+$count_sql = "SELECT COUNT(*) FROM services WHERE 1=1";
+$count_params = [];
+
+if ($search_term !== '') {
+    $count_sql .= " AND (title LIKE ? OR description LIKE ?)";
+    $count_params[] = $pattern;
+    $count_params[] = $pattern;
+}
+
+if ($category_filter !== '') {
+    $count_sql .= " AND title LIKE ?";
+    $count_params[] = $category_filter . '%';
+}
+
+$total_services = (int)executeQuery($count_sql, $count_params)->fetchColumn();
+$total_pages = max(1, (int)ceil($total_services / $per_page));
+
+// Final services query
 $sql .= " ORDER BY created_at DESC LIMIT ? OFFSET ?";
 $params[] = $per_page;
 $params[] = $offset;
@@ -236,7 +252,7 @@ require_once __DIR__ . '/includes/header.php';
     <div class="container">
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/constructioninnagpur/">Home</a></li>
+                <li class="breadcrumb-item"><a href="<?= SITE_URL ?>/">Home</a></li>
                 <li class="breadcrumb-item active" aria-current="page">Services</li>
             </ol>
         </nav>
@@ -244,6 +260,9 @@ require_once __DIR__ . '/includes/header.php';
         <p class="banner-subtitle">Comprehensive solutions from concept to completion</p>
         <form action="" method="get" class="hero-search">
             <input type="text" name="search" placeholder="Search services..." value="<?= sanitizeOutput($search_term) ?>">
+            <?php if ($category_filter): ?>
+                <input type="hidden" name="category" value="<?= sanitizeOutput($category_filter) ?>">
+            <?php endif; ?>
             <button type="submit"><i class="fas fa-search"></i></button>
         </form>
     </div>
@@ -263,6 +282,9 @@ require_once __DIR__ . '/includes/header.php';
                         <h3 class="sidebar-title">Search Services</h3>
                         <form action="" method="get" class="search-box">
                             <input type="text" name="search" placeholder="Search services..." value="<?= sanitizeOutput($search_term) ?>">
+                            <?php if ($category_filter): ?>
+                                <input type="hidden" name="category" value="<?= sanitizeOutput($category_filter) ?>">
+                            <?php endif; ?>
                             <button type="submit"><i class="fas fa-search"></i></button>
                         </form>
                     </div>
@@ -271,16 +293,20 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="sidebar">
                         <h3 class="sidebar-title">Categories</h3>
                         <ul class="category-list">
-                            <li><a href="/constructioninnagpur/services.php" class="<?= empty($category_filter) ? 'active' : '' ?>">
-                                <span>All Services</span>
-                                <span class="category-count"><?= $total_services ?></span>
-                            </a></li>
+                            <li>
+                                <a href="<?= SITE_URL ?>/services.php" class="<?= empty($category_filter) && empty($search_term) ? 'active' : '' ?>">
+                                    <span>All Services</span>
+                                    <span class="category-count"><?= $total_services ?></span>
+                                </a>
+                            </li>
                             <?php foreach ($categories as $cat): ?>
-                                <li><a href="?category=<?= urlencode($cat['category']) ?>&search=<?= urlencode($search_term) ?>"
+                                <li>
+                                    <a href="?category=<?= urlencode($cat['category']) ?>&search=<?= urlencode($search_term) ?>"
                                        class="<?= $category_filter === $cat['category'] ? 'active' : '' ?>">
-                                    <span><?= sanitizeOutput(ucfirst($cat['category'])) ?></span>
-                                    <span class="category-count"><?= $cat['count'] ?></span>
-                                </a></li>
+                                        <span><?= sanitizeOutput(ucfirst($cat['category'])) ?></span>
+                                        <span class="category-count"><?= $cat['count'] ?></span>
+                                    </a>
+                                </li>
                             <?php endforeach; ?>
                         </ul>
                     </div>
@@ -292,14 +318,13 @@ require_once __DIR__ . '/includes/header.php';
                             <div class="popular-service">
                                 <?php if (!empty($p['cover_image'])): ?>
                                     <div class="popular-service-image">
-                                        <!-- FIXED: Correct path -->
-                                        <img src="/constructioninnagpur<?= sanitizeOutput($p['cover_image']) ?>" 
-                                             alt="<?= sanitizeOutput($p['title']) ?>">
+                                        <img src="<?= SITE_URL ?><?= sanitizeOutput($p['cover_image']) ?>" 
+                                             alt="<?= sanitizeOutput($p['title']) ?>" loading="lazy">
                                     </div>
                                 <?php endif; ?>
                                 <div class="popular-service-content">
                                     <div class="popular-service-title">
-                                        <a href="/constructioninnagpur/service-info.php?id=<?= (int)$p['id'] ?>">
+                                        <a href="<?= SITE_URL ?>/service-info.php?id=<?= (int)$p['id'] ?>">
                                             <?= sanitizeOutput($p['title']) ?>
                                         </a>
                                     </div>
@@ -326,20 +351,20 @@ require_once __DIR__ . '/includes/header.php';
                             $icon  = !empty($s['icon']) ? sanitizeOutput($s['icon']) : 'tool';
                             $title = sanitizeOutput($s['title']);
                             $desc  = sanitizeOutput(substr(strip_tags($s['description']), 0, 120)) . '...';
-                            $slug  = !empty($s['slug']) ? sanitizeOutput($s['slug']) : strtolower(str_replace([' ', '&'], ['-', 'and'], $s['title']));
+                            $slug  = !empty($s['slug']) 
+                                ? sanitizeOutput($s['slug']) 
+                                : strtolower(preg_replace('/[^a-z0-9]+/', '-', $s['title']));
                             
-                            // FIXED: Correct cover image path
                             $cover = !empty($s['cover_image']) 
-                                ? '/constructioninnagpur' . sanitizeOutput($s['cover_image']) 
+                                ? SITE_URL . sanitizeOutput($s['cover_image']) 
                                 : 'https://via.placeholder.com/300x140/eee/ccc?text=Service';
                         ?>
-                            <a href="/constructioninnagpur/service-info.php?slug=<?= urlencode($slug) ?>" class="service-card">
+                            <a href="<?= SITE_URL ?>/service-info.php?slug=<?= urlencode($slug) ?>" class="service-card">
                                 <div class="service-cover" style="background-image:url('<?= $cover ?>');"></div>
                                 
-                                <!-- FIXED: Icon Image OR Feather Icon -->
                                 <div class="service-icon">
                                     <?php if (!empty($s['icon_image'])): ?>
-                                        <img src="/constructioninnagpur<?= sanitizeOutput($s['icon_image']) ?>" alt="icon">
+                                        <img src="<?= SITE_URL ?><?= sanitizeOutput($s['icon_image']) ?>" alt="icon" loading="lazy">
                                     <?php else: ?>
                                         <i data-feather="<?= $icon ?>"></i>
                                     <?php endif; ?>
@@ -368,7 +393,7 @@ require_once __DIR__ . '/includes/header.php';
                         foreach ($steps as $i => $step):
                         ?>
                             <div class="process-card">
-                                <div class="process-number"><?= $i+1 ?></div>
+                                <div class="process-number"><?= $i + 1 ?></div>
                                 <h4 class="h5 fw-bold"><?= sanitizeOutput($step[0]) ?></h4>
                                 <p class="small"><?= sanitizeOutput($step[1]) ?></p>
                             </div>
@@ -439,10 +464,10 @@ require_once __DIR__ . '/includes/header.php';
                 <h2 class="display-5 fw-bold mb-4">Ready to Build Your Dream?</h2>
                 <p class="lead mb-4">Let's discuss your vision and create something extraordinary together</p>
                 <div class="d-flex justify-content-center gap-3 flex-wrap">
-                    <a href="/constructioninnagpur/contact.php" class="btn btn-primary btn-lg">
+                    <a href="<?= SITE_URL ?>/contact.php" class="btn btn-primary btn-lg">
                         Get Free Consultation
                     </a>
-                    <a href="/constructioninnagpur/projects.php" class="btn btn-outline-light btn-lg">
+                    <a href="<?= SITE_URL ?>/projects.php" class="btn btn-outline-light btn-lg">
                         View Projects
                     </a>
                 </div>
@@ -453,7 +478,6 @@ require_once __DIR__ . '/includes/header.php';
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
 
-<!-- Initialize Feather Icons -->
 <script>
     feather.replace();
 </script>

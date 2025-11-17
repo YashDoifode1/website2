@@ -3,11 +3,13 @@
  * packages.php – Grand Jyothi Construction
  * Full page with STICKY SIDEBAR + Smart Comparison Table
  * Uses: packages + package_sections tables
+ * FIXED: SITE_URL, paths, consistency
  */
 
 declare(strict_types=1);
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/security.php';
+require_once __DIR__ . '/config.php'; // For SITE_URL
 
 $page_title = 'Construction Packages | Grand Jyothi Construction';
 
@@ -119,7 +121,7 @@ require_once __DIR__ . '/includes/header.php';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= $page_title ?></title>
+    <title><?= sanitizeOutput($page_title) ?></title>
 
     <!-- Bootstrap + Icons + Fonts -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -180,7 +182,7 @@ require_once __DIR__ . '/includes/header.php';
         .package-items-list li{padding:6px 0;display:flex;align-items:flex-start;}
         .package-items-list li::before{content:"•";color:var(--primary-yellow);font-weight:bold;margin-right:10px;}
 
-        /* Sticky Sidebar */
+        /* Sidebar */
         .sidebar-sticky {
             position: sticky;
             top: 20px;
@@ -193,7 +195,6 @@ require_once __DIR__ . '/includes/header.php';
         .sidebar-sticky::-webkit-scrollbar-thumb{background:var(--primary-yellow);border-radius:10px;}
         .sidebar-sticky::-webkit-scrollbar-thumb:hover{background:#e89a1f;}
 
-        /* Sidebar Items */
         .sidebar{background:var(--light-gray);border-radius:12px;padding:28px;margin-bottom:24px;}
         .sidebar-title{font-size:1.25rem;margin-bottom:20px;padding-bottom:10px;
             border-bottom:2px solid var(--primary-yellow);display:inline-block;}
@@ -271,7 +272,7 @@ require_once __DIR__ . '/includes/header.php';
     <div class="container">
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/constructioninnagpur/">Home</a></li>
+                <li class="breadcrumb-item"><a href="<?= SITE_URL ?>/">Home</a></li>
                 <li class="breadcrumb-item active" aria-current="page">Packages</li>
             </ol>
         </nav>
@@ -343,7 +344,7 @@ require_once __DIR__ . '/includes/header.php';
                                         <?php endif; ?>
 
                                         <div class="text-center mt-4">
-                                            <a href="select-plan.php?plan=<?= urlencode($p['title']) ?>"
+                                            <a href="<?= SITE_URL ?>/select-plan.php?plan=<?= urlencode($p['title']) ?>"
                                                class="btn btn-primary w-100">Select This Package</a>
                                         </div>
                                     </div>
@@ -416,7 +417,7 @@ require_once __DIR__ . '/includes/header.php';
                     <!-- Search -->
                     <div class="sidebar">
                         <h3 class="sidebar-title">Search Packages</h3>
-                        <form action="" method="get" class="search-box">
+                        <form action="<?= SITE_URL ?>/packages.php" method="get" class="search-box">
                             <input type="text" name="search" placeholder="Search..." value="<?= sanitizeOutput($_GET['search'] ?? '') ?>">
                             <button type="submit"><i class="fas fa-search"></i></button>
                         </form>
@@ -426,14 +427,14 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="sidebar">
                         <h3 class="sidebar-title">Categories</h3>
                         <ul class="category-list">
-                            <li><a href="?" class="<?= empty($_GET['category']) ? 'active' : '' ?>">
+                            <li><a href="<?= SITE_URL ?>/packages.php" class="<?= empty($_GET['category']) ? 'active' : '' ?>">
                                 <span>All Packages</span>
-                                <span class="category-count"><?= $total_packages ?></span>
+                                <span class="categorywend-count"><?= $total_packages ?></span>
                             </a></li>
                             <?php foreach ($categories as $c): ?>
                                 <li>
-                                    <a href="?category=<?= urlencode($c['category']) ?>"
-                                   class="<?= ($_GET['category'] ?? '') === $c['category'] ? 'active' : '' ?>">
+                                    <a href="<?= SITE_URL ?>/packages.php?category=<?= urlencode($c['category']) ?>"
+                                       class="<?= ($_GET['category'] ?? '') === $c['category'] ? 'active' : '' ?>">
                                         <span><?= ucfirst(sanitizeOutput($c['category'])) ?></span>
                                         <span class="category-count"><?= $c['count'] ?></span>
                                     </a>
@@ -442,13 +443,14 @@ require_once __DIR__ . '/includes/header.php';
                         </ul>
                     </div>
 
-                    <!-- Popular -->
+                    <!-- Popular Packages (Uncomment when images are added) -->
+                    <!--
                     <div class="sidebar">
                         <h3 class="sidebar-title">Popular Packages</h3>
                         <?php foreach ($popular_packages as $p): ?>
                             <div class="popular-package">
                                 <div class="popular-package-image">
-                                    <img src="<?= $p['cover_image'] ?? 'https://via.placeholder.com/70' ?>" alt="">
+                                    <img src="<?= $p['cover_image'] ?? 'https://via.placeholder.com/70' ?>" alt="<?= sanitizeOutput($p['title']) ?>" loading="lazy">
                                 </div>
                                 <div>
                                     <div class="popular-package-title">
@@ -461,6 +463,7 @@ require_once __DIR__ . '/includes/header.php';
                             </div>
                         <?php endforeach; ?>
                     </div>
+                    -->
 
                 </div>
             </div>
@@ -522,8 +525,8 @@ require_once __DIR__ . '/includes/header.php';
         <h2 class="display-5 fw-bold mb-4">Ready to Build Your Dream Home?</h2>
         <p class="lead mb-4">Get a free consultation and detailed quote today.</p>
         <div class="d-flex justify-content-center gap-3 flex-wrap">
-            <a href="contact.php" class="btn btn-primary btn-lg">Get Free Estimate</a>
-            <a href="contact.php" class="btn btn-outline-light btn-lg">Schedule Call</a>
+            <a href="<?= SITE_URL ?>/contact.php" class="btn btn-primary btn-lg">Get Free Estimate</a>
+            <a href="<?= SITE_URL ?>/contact.php" class="btn btn-outline-light btn-lg">Schedule Call</a>
         </div>
     </div>
 </section>

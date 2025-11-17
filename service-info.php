@@ -2,27 +2,30 @@
 /**
  * Service Info Page – Grand Jyothi Construction
  * Modern design aligned with services / projects / blog-detail
- * Fixed: Image paths, Feather icons, mobile UX
+ * FIXED: SITE_URL, image paths, Feather icons, mobile UX, category logic
  */
 
 declare(strict_types=1);
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/security.php';
+require_once __DIR__ . '/config.php'; // For SITE_URL
 
 /* ---------- Validate slug ---------- */
-$slug = $_GET['slug'] ?? '';
+$slug = trim($_GET['slug'] ?? '');
 if (empty($slug)) {
-    header('Location: services.php');
+    header('Location: ' . SITE_URL . '/services.php');
     exit;
 }
 
 /* ---------- Current Service ---------- */
-$sql = "SELECT title, description, icon, category, author, cover_image, icon_image, created_at, slug
+$sql = "SELECT title, description, icon, SUBSTRING_INDEX(title, ' ', 1) AS category, 
+               author, cover_image, icon_image, created_at, slug
         FROM services WHERE slug = ? LIMIT 1";
 $stmt = executeQuery($sql, [$slug]);
 $service = $stmt->fetch(PDO::FETCH_ASSOC);
+
 if (!$service) {
-    header('Location: services.php');
+    header('Location: ' . SITE_URL . '/services.php');
     exit;
 }
 
@@ -30,29 +33,29 @@ if (!$service) {
 $prev = executeQuery(
     "SELECT slug, title FROM services WHERE created_at < ? ORDER BY created_at DESC LIMIT 1",
     [$service['created_at']]
-)->fetch();
+)->fetch(PDO::FETCH_ASSOC);
 
 $next = executeQuery(
     "SELECT slug, title FROM services WHERE created_at > ? ORDER BY created_at ASC LIMIT 1",
     [$service['created_at']]
-)->fetch();
+)->fetch(PDO::FETCH_ASSOC);
 
-/* ---------- Sidebar data ---------- */
-$categories = executeQuery(
-    "SELECT category, COUNT(*) AS count
-     FROM services
-     WHERE category IS NOT NULL AND category <> ''
-     GROUP BY category
-     ORDER BY category"
-)->fetchAll();
+/* ---------- Sidebar: Categories (first word of title) ---------- */
+$categories = executeQuery("
+    SELECT SUBSTRING_INDEX(title, ' ', 1) AS category, COUNT(*) AS count
+    FROM services
+    GROUP BY category
+    ORDER BY category
+")->fetchAll(PDO::FETCH_ASSOC);
 
-$total_services = executeQuery("SELECT COUNT(*) FROM services")->fetchColumn();
+$total_services = (int)executeQuery("SELECT COUNT(*) FROM services")->fetchColumn();
 
-$popular_services = executeQuery(
-    "SELECT title, slug, cover_image, icon_image
-     FROM services
-     ORDER BY created_at DESC LIMIT 3"
-)->fetchAll();
+/* ---------- Popular Services ---------- */
+$popular_services = executeQuery("
+    SELECT title, slug, cover_image, icon_image
+    FROM services
+    ORDER BY created_at DESC LIMIT 3
+")->fetchAll(PDO::FETCH_ASSOC);
 
 $page_title = sanitizeOutput($service['title']) . ' | Grand Jyothi Construction';
 require_once __DIR__ . '/includes/header.php';
@@ -91,7 +94,7 @@ require_once __DIR__ . '/includes/header.php';
         /* ==== HERO ==== */
         .service-banner{
             height:500px;background:linear-gradient(rgba(26,26,26,.7),rgba(26,26,26,.7)),
-            url('<?= !empty($service['cover_image']) ? '/constructioninnagpur' . sanitizeOutput($service['cover_image']) : 'https://via.placeholder.com/1600x900/1A1A1A/F9A826?text=Service' ?>')
+            url('<?= !empty($service['cover_image']) ? SITE_URL . sanitizeOutput($service['cover_image']) : 'https://via.placeholder.com/1600x900/1A1A1A/F9A826?text=Service' ?>')
             center/cover no-repeat;display:flex;align-items:flex-end;padding:60px 0;color:var(--white);position:relative;
         }
         .service-banner::before{content:'';position:absolute;inset:0;
@@ -191,17 +194,17 @@ require_once __DIR__ . '/includes/header.php';
         <div class="position-relative z-2">
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="/constructioninnagpur/">Home</a></li>
-                    <li class="breadcrumb-item"><a href="services.php">Services</a></li>
+                    <li class="breadcrumb-item"><a href="<?= SITE_URL ?>/">Home</a></li>
+                    <li class="breadcrumb-item"><a href="<?= SITE_URL ?>/services.php">Services</a></li>
                     <li class="breadcrumb-item active" aria-current="page"><?= sanitizeOutput($service['title']) ?></li>
                 </ol>
             </nav>
             <h1 class="service-title"><?= sanitizeOutput($service['title']) ?></h1>
             <div class="service-meta">
-                <?php if ($service['category']): ?>
+                <?php if (!empty($service['category'])): ?>
                     <div class="badge-category"><?= ucfirst(sanitizeOutput($service['category'])) ?></div>
                 <?php endif; ?>
-                <?php if ($service['author']): ?>
+                <?php if (!empty($service['author'])): ?>
                     <div class="badge-author"><i class="fas fa-user me-1"></i> <?= sanitizeOutput($service['author']) ?></div>
                 <?php endif; ?>
                 <div class="meta-date"><i class="far fa-calendar-alt me-1"></i> <?= date('F j, Y', strtotime($service['created_at'])) ?></div>
@@ -222,7 +225,7 @@ require_once __DIR__ . '/includes/header.php';
                 <div class="text-center mb-5">
                     <div class="service-icon-display">
                         <?php if (!empty($service['icon_image'])): ?>
-                            <img src="/constructioninnagpur<?= sanitizeOutput($service['icon_image']) ?>" alt="icon">
+                            <img src="<?= SITE_URL ?><?= sanitizeOutput($service['icon_image']) ?>" alt="<?= sanitizeOutput($service['title']) ?> icon" loading="lazy">
                         <?php else: ?>
                             <i data-feather="<?= sanitizeOutput($service['icon'] ?? 'tool') ?>"></i>
                         <?php endif; ?>
@@ -255,7 +258,7 @@ require_once __DIR__ . '/includes/header.php';
                 <div class="service-navigation">
                     <?php if ($prev): ?>
                         <div class="nav-service prev">
-                            <a href="service-info.php?slug=<?= $prev['slug'] ?>">
+                            <a href="<?= SITE_URL ?>/service-info.php?slug=<?= urlencode($prev['slug']) ?>">
                                 <div class="nav-icon"><i class="fas fa-arrow-left"></i></div>
                                 <div>
                                     <div class="text-muted small">Previous</div>
@@ -267,7 +270,7 @@ require_once __DIR__ . '/includes/header.php';
 
                     <?php if ($next): ?>
                         <div class="nav-service next">
-                            <a href="service-info.php?slug=<?= $next['slug'] ?>">
+                            <a href="<?= SITE_URL ?>/service-info.php?slug=<?= urlencode($next['slug']) ?>">
                                 <div>
                                     <div class="text-muted small">Next</div>
                                     <div class="nav-service-title"><?= sanitizeOutput($next['title']) ?></div>
@@ -280,10 +283,10 @@ require_once __DIR__ . '/includes/header.php';
 
                 <!-- CTA Buttons -->
                 <div class="text-center mt-5">
-                    <a href="/constructioninnagpur/contact.php" class="btn btn-primary me-3">
+                    <a href="<?= SITE_URL ?>/contact.php" class="btn btn-primary me-3">
                         Get Quote
                     </a>
-                    <a href="services.php" class="btn btn-outline-dark">
+                    <a href="<?= SITE_URL ?>/services.php" class="btn btn-outline-dark">
                         All Services
                     </a>
                 </div>
@@ -296,7 +299,7 @@ require_once __DIR__ . '/includes/header.php';
                 <!-- Search -->
                 <div class="sidebar">
                     <h3 class="sidebar-title">Search Services</h3>
-                    <form action="services.php" method="get" class="search-box">
+                    <form action="<?= SITE_URL ?>/services.php" method="get" class="search-box">
                         <input type="text" name="search" placeholder="Search services..." value="<?= sanitizeOutput($_GET['search'] ?? '') ?>">
                         <button type="submit"><i class="fas fa-search"></i></button>
                     </form>
@@ -307,14 +310,14 @@ require_once __DIR__ . '/includes/header.php';
                     <h3 class="sidebar-title">Service Categories</h3>
                     <ul class="category-list">
                         <li>
-                            <a href="services.php" class="<?= empty($_GET['category']) ? 'active' : '' ?>">
+                            <a href="<?= SITE_URL ?>/services.php" class="<?= empty($_GET['category']) ? 'active' : '' ?>">
                                 <span>All Services</span>
                                 <span class="category-count"><?= $total_services ?></span>
                             </a>
                         </li>
                         <?php foreach ($categories as $c): ?>
                             <li>
-                                <a href="services.php?category=<?= urlencode($c['category']) ?>"
+                                <a href="<?= SITE_URL ?>/services.php?category=<?= urlencode($c['category']) ?>"
                                    class="<?= ($_GET['category'] ?? '') === $c['category'] ? 'active' : '' ?>">
                                     <span><?= ucfirst(sanitizeOutput($c['category'])) ?></span>
                                     <span class="category-count"><?= $c['count'] ?></span>
@@ -330,16 +333,16 @@ require_once __DIR__ . '/includes/header.php';
                     <?php foreach ($popular_services as $p): ?>
                         <?php
                         $thumb = !empty($p['cover_image'])
-                            ? '/constructioninnagpur' . sanitizeOutput($p['cover_image'])
+                            ? SITE_URL . sanitizeOutput($p['cover_image'])
                             : 'https://via.placeholder.com/70/eee/ccc?text=Service';
                         ?>
                         <div class="popular-service">
                             <div class="popular-service-image">
-                                <img src="<?= $thumb ?>" alt="<?= sanitizeOutput($p['title']) ?>">
+                                <img src="<?= $thumb ?>" alt="<?= sanitizeOutput($p['title']) ?>" loading="lazy">
                             </div>
                             <div>
                                 <div class="popular-service-title">
-                                    <a href="service-info.php?slug=<?= sanitizeOutput($p['slug']) ?>">
+                                    <a href="<?= SITE_URL ?>/service-info.php?slug=<?= urlencode($p['slug']) ?>">
                                         <?= sanitizeOutput($p['title']) ?>
                                     </a>
                                 </div>
@@ -361,10 +364,10 @@ require_once __DIR__ . '/includes/header.php';
                 <h2 class="display-5 fw-bold mb-4">Ready to Start Your Project?</h2>
                 <p class="lead mb-4">Let’s bring your vision to life with expert construction services</p>
                 <div class="d-flex justify-content-center gap-3 flex-wrap">
-                    <a href="/constructioninnagpur/contact.php" class="btn btn-primary btn-lg">
+                    <a href="<?= SITE_URL ?>/contact.php" class="btn btn-primary btn-lg">
                         Get Free Consultation
                     </a>
-                    <a href="/constructioninnagpur/services.php" class="btn btn-outline-light btn-lg">
+                    <a href="<?= SITE_URL ?>/services.php" class="btn btn-outline-light btn-lg">
                         Explore All Services
                     </a>
                 </div>
