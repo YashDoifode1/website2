@@ -133,7 +133,7 @@ require_once __DIR__ . '/includes/admin_header.php';
         <div class="gallery-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem;">
             <?php foreach ($images as $img): ?>
                 <div class="gallery-item" style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.5rem; background: #fff;">
-                    <img src="/constructioninnagpur/assets/images/<?= sanitizeOutput($img['image_path']) ?>"
+                    <img src="<?= SITE_URL ?>/assets/images/<?= sanitizeOutput($img['image_path']) ?>"
                          alt="<?= sanitizeOutput($img['caption'] ?? 'Project image') ?>"
                          style="width: 100%; border-radius: 6px; object-fit: cover; aspect-ratio: 1/1;">
                     <p style="font-size: 0.875rem; color: #475569; margin: 0.5rem 0;">

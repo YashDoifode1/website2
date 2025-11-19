@@ -248,7 +248,7 @@ require_once __DIR__ . '/includes/header.php';
         <section style="text-align: center; margin-top: 3rem; padding: 2rem; background: #f8f9fa; border-radius: 8px;">
             <h2>Still Have Questions?</h2>
             <p>Can't find the answer you're looking for? We're here to help!</p>
-            <a href="/constructioninnagpur/contact.php" role="button">Contact Us</a>
+            <a href="<?= SITE_URL ?>/contact.php" role="button">Contact Us</a>
         </section>
     </article>
 </main>

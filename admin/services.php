@@ -287,7 +287,7 @@ require_once __DIR__ . '/includes/admin_header.php';
                     <?php if (!empty($service['cover_image']) && $service['cover_image'] !== 'placeholder.jpg'): ?>
                         <img src="<?= sanitizeOutput($service['cover_image']) ?>" alt="Current cover" class="img-preview">
                     <?php elseif (!empty($service['cover_image'])): ?>
-                        <img src="/constructioninnagpur/assets/images/placeholder.jpg" alt="Placeholder" class="img-preview">
+                        <img src="<?= SITE_URL ?>/assets/images/placeholder.jpg" alt="Placeholder" class="img-preview">
                     <?php endif; ?>
                 </div>
                 <input type="file" name="cover_image" accept=".jpg,.jpeg,.png,.webp" class="form-input" id="coverInput">

@@ -94,7 +94,7 @@ $social_links = [
             <h3 class="footer-title">Quick Links</h3>
             <div class="footer-links">
                 <?php foreach ($quick_links as $url => $title): ?>
-                    <a href="/constructioninnagpur/<?= sanitizeOutput($url) ?>" class="footer-link">
+                    <a href="<?= SITE_URL ?>/<?= sanitizeOutput($url) ?>" class="footer-link">
                         <?= sanitizeOutput($title) ?>
                     </a>
                 <?php endforeach; ?>
@@ -106,7 +106,7 @@ $social_links = [
             <h3 class="footer-title">Resources</h3>
             <div class="footer-links">
                 <?php foreach ($resource_links as $url => $title): ?>
-                    <a href="/constructioninnagpur/<?= sanitizeOutput($url) ?>" class="footer-link">
+                    <a href="<?= SITE_URL ?>/<?= sanitizeOutput($url) ?>" class="footer-link">
                         <?= sanitizeOutput($title) ?>
                     </a>
                 <?php endforeach; ?>

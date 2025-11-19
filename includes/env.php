@@ -118,7 +118,8 @@ function hasEnv(string $key): bool
 }
 
 // Load .env file automatically
-$envPath = __DIR__ . '/../.env';
+// Change this line in includes/env.php
+$envPath = __DIR__ . '/../.env';  // This is already correct in your code
 if (file_exists($envPath)) {
     loadEnv($envPath);
 }

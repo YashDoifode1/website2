@@ -15,6 +15,10 @@ define('SITE_NAME', env('SITE_NAME', 'Grand Jyothi Construction'));
 define('SITE_TAGLINE', env('SITE_TAGLINE', 'Building your vision with excellence and trust'));
 define('SITE_URL', env('APP_URL', 'http://localhost/constructioninnagpur'));
 
+// Google reCAPTCHA Keys (from .env file)
+define('RECAPTCHA_SITE_KEY', env('RECAPTCHA_SITE_KEY', 'your-site-key-here'));
+define('RECAPTCHA_SECRET_KEY', env('RECAPTCHA_SECRET_KEY', 'your-secret-key-here'));
+
 // Contact Information
 define('CONTACT_EMAIL', env('CONTACT_EMAIL', 'info@grandjyothi.com'));
 define('CONTACT_PHONE', env('CONTACT_PHONE', '+91 98765 43210'));

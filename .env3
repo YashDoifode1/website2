@@ -14,6 +14,11 @@ DB_USER=if0_37188433
 DB_PASS=9nzZKwZmCC
 DB_CHARSET=utf8mb4
 
+
+RECAPTCHA_SITE_KEY=your-site-key-here
+RECAPTCHA_SECRET_KEY=your-secret-key-here
+
+
 # Site Information
 SITE_NAME="Grand Jyothi Construction"
 SITE_TAGLINE="Building your vision with excellence and trust"

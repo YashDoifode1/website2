@@ -6,6 +6,16 @@
     RewriteBase /constructioninnagpur/
 </IfModule>
 
+# Custom Error Documents
+ErrorDocument 400 /constructioninnagpur/pages/400.php
+ErrorDocument 401 /constructioninnagpur/pages/403.php
+ErrorDocument 403 /constructioninnagpur/pages/403.php
+ErrorDocument 404 /constructioninnagpur/pages/404.php
+ErrorDocument 500 /constructioninnagpur/pages/500.php
+ErrorDocument 502 /constructioninnagpur/pages/500.php
+ErrorDocument 503 /constructioninnagpur/pages/503.php
+ErrorDocument 504 /constructioninnagpur/pages/500.php
+
 # Security Headers (commented out for XAMPP compatibility - uncomment if supported)
 # <IfModule mod_headers.c>
 #     Header set X-Frame-Options "SAMEORIGIN"

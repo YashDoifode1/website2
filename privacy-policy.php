@@ -147,7 +147,7 @@ require_once __DIR__ . '/includes/header.php';
         </section>
         
         <div style="text-align: center; margin-top: 3rem;">
-            <a href="/constructioninnagpur/index.php" role="button">Back to Home</a>
+            <a href="<?= SITE_URL ?>/index.php" role="button">Back to Home</a>
         </div>
     </article>
 </main>
