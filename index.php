@@ -1053,4 +1053,11 @@ require_once __DIR__ . '/includes/header.php';
 </script>
 
 </body>
+</html>toggle('selected', this.checked);
+            calculateEstimate();
+        });
+    });
+</script>
+
+</body>
 </html>

@@ -390,10 +390,10 @@ require_once __DIR__ . '/includes/header.php';
                         </ul>
 
                         <div class="map-container">
-                            <div class="map-placeholder">
-                                <i class="fas fa-map-marked-alt fa-3x mb-3"></i>
-                                <p>Google Maps Integration</p>
-                                <small>Location: Nagpur, Maharashtra</small>
+                            <div class="contact-method">
+                                <i class="fas fa-phone-alt"></i>
+                                <h4>Call Us</h4>
+                                <a href="tel:<?= preg_replace('/[^0-9+]/', '', PHONE_NUMBER) ?>"><?= CONTACT_PHONE ?></a>
                             </div>
                         </div>
                     </div>
@@ -458,10 +458,10 @@ require_once __DIR__ . '/includes/header.php';
 
 <!-- ====================== FLOATING BUTTONS ====================== -->
 <div class="floating-buttons">
-    <a href="https://wa.me/+919075956483" target="_blank" class="floating-btn whatsapp-btn" title="Chat on WhatsApp">
+    <a href="https://wa.me/<?= preg_replace('/[^0-9]/', '', WHATSAPP_NUMBER) ?>" target="_blank" class="floating-btn whatsapp-btn" title="Chat on WhatsApp">
         <i class="fab fa-whatsapp"></i>
     </a>
-    <a href="tel:+919075956483" class="floating-btn call-btn" title="Call Us">
+    <a href="tel:<?= preg_replace('/[^0-9+]/', '', PHONE_NUMBER) ?>" class="floating-btn call-btn" title="Call Us">
         <i class="fas fa-phone"></i>
     </a>
 </div>

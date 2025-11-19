@@ -7,6 +7,10 @@ APP_ENV=development
 APP_DEBUG=true
 APP_URL=https://codeaviary.html-5.me
 
+# Contact Numbers
+WHATSAPP_NUMBER="+919075956483"
+PHONE_NUMBER="+919075956483"
+
 # Database Configuration
 DB_HOST=sql101.infinityfree.com
 DB_NAME=if0_37188433_nagpur
