@@ -4,7 +4,7 @@ require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/security.php';
 require_once __DIR__ . '/config.php';
 
-$page_title      = 'Select Your Plan | Grand Jyothi Construction';
+$page_title      = 'Select Your Plan |Rakhi Construction';
 $success_message = '';
 $error_message   = '';
 $selected_plan   = trim((string)($_GET['plan'] ?? ''));

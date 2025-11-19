@@ -66,8 +66,24 @@ $nav_items = [
 
     <link rel="canonical" href="<?= sanitizeOutput($current_url) ?>">
 
-    <link rel="icon" href="<?= SITE_URL ?>/assets/images/favicon.ico" type="image/x-icon">
+    
+    <!-- ==================== FAVICONS – FIXED & BULLETPROOF (2025) ==================== -->
+    <link rel="icon" href="<?= SITE_URL ?>/assets/images/favicon.ico?v=<?= time() ?>" type="image/x-icon">
+    <link rel="icon" type="image/png" sizes="32x32" href="<?= SITE_URL ?>/assets/images/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="<?= SITE_URL ?>/assets/images/favicon-16x16.png">
     <link rel="apple-touch-icon" sizes="180x180" href="<?= SITE_URL ?>/assets/images/apple-touch-icon.png">
+    <link rel="manifest" href="<?= SITE_URL ?>/site.webmanifest">
+    <meta name="theme-color" content="#F9A826">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:title" content="<?= isset($page_title) ? sanitizeOutput($page_title) . ' - ' : '' ?><?= sanitizeOutput(SITE_NAME) ?>">
+    <meta property="og:description" content="<?= sanitizeOutput(SITE_DESCRIPTION) ?>">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="<?= sanitizeOutput($current_url) ?>">
+    <meta property="og:site_name" content="<?= sanitizeOutput(SITE_NAME) ?>">
+    <meta property="og:image" content="<?= SITE_URL ?>/assets/images/og-image.jpg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
 
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />

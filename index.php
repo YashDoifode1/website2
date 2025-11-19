@@ -9,7 +9,7 @@ require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/security.php';
 require_once __DIR__ . '/config.php';
 
-$page_title = 'Grand Jyothi Construction | Build Your Dream Home';
+$page_title = 'Rakhi Construction | Build Your Dream Home';
 
 // ---------- 1. Packages ----------
 $packages = executeQuery("

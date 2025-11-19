@@ -9,7 +9,7 @@ require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/security.php';
 require_once __DIR__ . '/config.php';
 
-$page_title = 'Blog & Insights | Grand Jyothi Construction';
+$page_title = 'Blog & Insights | Rakhi Construction';
 
 // ---------- 1. Filters ----------
 $category_filter = trim($_GET['category'] ?? '');

@@ -9,7 +9,7 @@ require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/security.php';
 require_once __DIR__ . '/config.php'; // For SITE_URL
 
-$page_title = 'Contact Us | Grand Jyothi Construction';
+$page_title = 'Contact Us | Rakhi Construction';
 $success_message = $error_message = '';
 
 /* ---------- 1. Form submission ---------- */
