@@ -1,6 +1,6 @@
 <?php
 /**
- * Project Info Page – Grand Jyothi Construction
+ * Project Info Page – Rakhi Construction & Consultancy
  * Modern design 100% aligned with blog‑detail.php
  * Uses project_images only (NO image column in projects)
  */
@@ -94,7 +94,7 @@ $popular_projects = executeQuery(
 )->fetchAll();
 
 /* ---------- Page title ---------- */
-$page_title = sanitizeOutput($project['title']) . ' | Grand Jyothi Construction';
+$page_title = sanitizeOutput($project['title']) . ' | Rakhi Construction & Consultancy';
 require_once __DIR__ . '/includes/header.php';
 ?>
 

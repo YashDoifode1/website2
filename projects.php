@@ -1,6 +1,6 @@
 <?php
 /**
- * Projects Page - Grand Jyothi Construction
+ * Projects Page - Rakhi Construction & Consultancy
  * Filterable Grid + Mini 3-Image Slider per Project
  * Uses project_images only (NO image column in projects)
  */
@@ -16,7 +16,7 @@ $assets_path = $base_path . '/assets/images';
 $placeholder_main = 'https://via.placeholder.com/600x400/1A1A1A/F9A826?text=No+Image';
 $placeholder_sidebar = 'https://via.placeholder.com/70x70/eeeeee/999999?text=NA';
 
-$page_title = 'Our Projects | Grand Jyothi Construction';
+$page_title = 'Our Projects | Rakhi Construction & Consultancy';
 
 // ---------------------------------------------------------------------
 // Fetch all projects with first 3 gallery images

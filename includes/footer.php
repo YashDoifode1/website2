@@ -17,14 +17,15 @@ if (!function_exists('sanitizeOutput')) {
 }
 
 // Site info
-$site_name     = defined('SITE_NAME') ? SITE_NAME : 'Grand Jyothi Construction';
+$site_name     = defined('SITE_NAME') ? SITE_NAME : 'Rakhi Construction & Consultancy Pvt Ltd';
 $company_desc  = defined('SITE_TAGLINE') ? SITE_TAGLINE : 'Building Dreams in Nagpur Since Years';
 
 // Contact info
 $contact_info = [
-    'address' => CONTACT_ADDRESS ?? 'Nagpur, Maharashtra',
-    'phone'   => CONTACT_PHONE ?? '+91 9876543210',
-    'email'   => CONTACT_EMAIL ?? 'info@grandjyothi.com'
+    'address' => CONTACT_ADDRESS ?? 'PL NO 55, CHAKRADHAR HO NEAR NAGAR PANCHAYAT BAHADURA ROAD, Nagpur, MAHARASHTRA - 440034',
+    'phone'   => CONTACT_PHONE ?? '+91 90759 56483',
+    'email'   => CONTACT_EMAIL ?? 'info@rakhiconstruction.com',
+    'phone2'  => defined('SECONDARY_PHONE') ? SECONDARY_PHONE : '+91 91128 41057'
 ];
 
 // Navigation
@@ -131,7 +132,12 @@ if (defined('SOCIAL_MEDIA') && is_array(SOCIAL_MEDIA)) {
                 <p><i class="fas fa-map-marker-alt"></i> <?= sanitizeOutput($contact_info['address']) ?></p>
                 <p><i class="fas fa-phone"></i> <a href="tel:<?= sanitizeOutput(str_replace(' ', '', $contact_info['phone'])) ?>">
                     <?= sanitizeOutput($contact_info['phone']) ?>
-                </a></p>
+                </a><br>
+                <span style="margin-left: 1.5rem;">
+                    <a href="tel:<?= sanitizeOutput(str_replace(' ', '', $contact_info['phone2'])) ?>">
+                        <?= sanitizeOutput($contact_info['phone2']) ?>
+                    </a>
+                </span></p>
                 <p><i class="fas fa-envelope"></i> <a href="mailto:<?= sanitizeOutput($contact_info['email']) ?>">
                     <?= sanitizeOutput($contact_info['email']) ?>
                 </a></p>

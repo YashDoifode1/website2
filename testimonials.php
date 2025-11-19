@@ -1,6 +1,6 @@
 <?php
 /**
- * Testimonials Page – Grand Jyothi Construction
+ * Testimonials Page – Rakhi Construction & Consultancy
  * 100% aligned with the rest of the site
  */
 
@@ -9,7 +9,7 @@ require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/security.php';
 require_once __DIR__ . '/config.php';
 
-$page_title = 'Client Testimonials | Grand Jyothi Construction';
+$page_title = 'Client Testimonials | Rakhi Construction & Consultancy';
 
 // ---------- 1. Fetch testimonials ----------
 $sql = "SELECT t.*, p.title AS project_title, p.location AS project_location 
@@ -191,7 +191,7 @@ require_once __DIR__ . '/includes/header.php';
                     <h2 class="section-title">Hear From Our Clients</h2>
                     <p class="text-center mb-5 lead text-muted">
                         Don't just take our word for it. Here's what our clients have to say about their 
-                        experience with Grand Jyothi Construction.
+                        experience with Rakhi Construction & Consultancy.
                     </p>
 
                     <?php if (empty($testimonials)): ?>

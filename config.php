@@ -13,11 +13,11 @@ require_once __DIR__ . '/includes/env.php';
 // ====================== SITE CONFIGURATION ======================
 
 // Core Site Information
-define('SITE_NAME', env('SITE_NAME', 'Grand Jyothi Construction'));
+define('SITE_NAME', env('SITE_NAME', 'Rakhi Construction & Consultancy Pvt Ltd'));
 define('SITE_TAGLINE', env('SITE_TAGLINE', 'Building your vision with excellence and trust'));
-define('SITE_URL', env('APP_URL', 'http://localhost/constructioninnagpur'));
-define('SITE_DESCRIPTION', env('SITE_DESCRIPTION', 'Leading construction company in Nagpur offering residential, commercial, and industrial construction services.'));
-define('SITE_KEYWORDS', env('SITE_KEYWORDS', 'construction, nagpur, residential, commercial, industrial, interior design, renovation'));
+define('SITE_URL', env('APP_URL', 'https://rakhiconstruction.com'));
+define('SITE_DESCRIPTION', env('SITE_DESCRIPTION', 'Leading construction and consultancy firm in Nagpur offering end-to-end construction solutions.'));
+define('SITE_KEYWORDS', env('SITE_KEYWORDS', 'construction, nagpur, consultancy, residential, commercial, industrial, construction services'));
 
 // Google reCAPTCHA
 define('RECAPTCHA_SITE_KEY', env('RECAPTCHA_SITE_KEY', 'your-site-key-here'));
@@ -26,13 +26,14 @@ define('RECAPTCHA_SECRET_KEY', env('RECAPTCHA_SECRET_KEY', 'your-secret-key-here
 // ====================== CONTACT INFORMATION ======================
 
 // Primary Contact
-define('CONTACT_EMAIL', env('CONTACT_EMAIL', 'info@grandjyothi.com'));
+define('CONTACT_EMAIL', env('CONTACT_EMAIL', 'info@rakhiconstruction.com'));
 define('CONTACT_PHONE', env('CONTACT_PHONE', '+91 90759 56483'));
-define('CONTACT_ADDRESS', env('CONTACT_ADDRESS', '123 Construction Plaza, Dharampeth, Nagpur - 440010, Maharashtra, India'));
+define('CONTACT_ADDRESS', env('CONTACT_ADDRESS', 'PL NO 55, CHAKRADHAR HO NEAR NAGAR PANCHAYAT BAHADURA ROAD, Nagpur, MAHARASHTRA - 440034'));
 
 // Contact Numbers
 define('WHATSAPP_NUMBER', env('WHATSAPP_NUMBER', '+919075956483'));
 define('PHONE_NUMBER', env('PHONE_NUMBER', '+919075956483'));
+define('SECONDARY_PHONE', env('SECONDARY_PHONE', '+919112841057'));
 
 // ====================== BUSINESS HOURS ======================
 
@@ -46,7 +47,7 @@ define('BUSINESS_HOURS', [
 
 define('SOCIAL_MEDIA', [
     'facebook' => [
-        'url' => env('FACEBOOK_URL', 'https://facebook.com/grandjyothi'),
+        'url' => env('FACEBOOK_URL', 'https://facebook.com/rakhiconstruction'),
         'icon' => 'fab fa-facebook-f',
         'name' => 'Facebook'
     ],

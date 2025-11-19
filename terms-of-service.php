@@ -22,7 +22,7 @@ require_once __DIR__ . '/includes/header.php';
         <section>
             <h2>1. Acceptance of Terms</h2>
             <p>
-                By accessing and using the Grand Jyothi Construction website and services, you accept and agree to be 
+                By accessing and using the Rakhi Construction & Consultancy Pvt Ltd website and services, you accept and agree to be 
                 bound by the terms and provisions of this agreement. If you do not agree to these terms, please do not 
                 use our services.
             </p>
@@ -31,7 +31,7 @@ require_once __DIR__ . '/includes/header.php';
         <section>
             <h2>2. Services Description</h2>
             <p>
-                Grand Jyothi Construction provides construction, renovation, and related services including but not limited to:
+                Rakhi Construction & Consultancy Pvt Ltd provides construction, renovation, and related services including but not limited to:
             </p>
             <ul>
                 <li>Residential construction and renovation</li>
@@ -88,7 +88,7 @@ require_once __DIR__ . '/includes/header.php';
             <h2>6. Intellectual Property</h2>
             <p>
                 All content on this website, including text, graphics, logos, images, and software, is the property of 
-                Grand Jyothi Construction and is protected by copyright and intellectual property laws. You may not 
+                Rakhi Construction & Consultancy Pvt Ltd and is protected by copyright and intellectual property laws. You may not 
                 reproduce, distribute, or create derivative works without our express written permission.
             </p>
         </section>
@@ -109,7 +109,7 @@ require_once __DIR__ . '/includes/header.php';
         <section>
             <h2>8. Limitation of Liability</h2>
             <p>
-                To the maximum extent permitted by law, Grand Jyothi Construction shall not be liable for any indirect, 
+                To the maximum extent permitted by law, Rakhi Construction & Consultancy Pvt Ltd shall not be liable for any indirect, 
                 incidental, special, consequential, or punitive damages arising from your use of our services or website.
             </p>
         </section>
@@ -117,7 +117,7 @@ require_once __DIR__ . '/includes/header.php';
         <section>
             <h2>9. Indemnification</h2>
             <p>
-                You agree to indemnify and hold harmless Grand Jyothi Construction, its officers, directors, employees, 
+                You agree to indemnify and hold harmless Rakhi Construction & Consultancy Pvt Ltd, its officers, directors, employees, 
                 and agents from any claims, damages, losses, liabilities, and expenses arising from your use of our 
                 services or violation of these terms.
             </p>

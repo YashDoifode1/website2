@@ -76,7 +76,7 @@ require_once __DIR__ . '/includes/admin_header.php';
             <div class="form-group">
                 <label class="form-label">Site Name *</label>
                 <input type="text" name="site_name" class="form-input"
-                       value="<?= sanitizeOutput($settings['site_name'] ?? 'Grand Jyothi Construction') ?>" required>
+                       value="<?= sanitizeOutput($settings['site_name'] ?? 'Rakhi Construction & Consultancy Pvt Ltd') ?>" required>
             </div>
             
             <div class="form-group">

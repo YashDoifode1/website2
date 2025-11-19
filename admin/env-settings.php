@@ -210,7 +210,7 @@ require_once __DIR__ . '/includes/admin_header.php';
                 <label class="form-label">Logo Text</label>
                 <input type="text" name="site_logo_text" class="form-input" 
                        value="<?= sanitizeOutput($envValues['SITE_LOGO_TEXT'] ?? '') ?>">
-                <small class="form-help">Main logo text (e.g., "Grand Jyothi")</small>
+                <small class="form-help">Main logo text (e.g., "Rakhi")</small>
             </div>
             
             <div class="form-group">

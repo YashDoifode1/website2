@@ -9,7 +9,7 @@ declare(strict_types=1);
 
 // Load config for SITE_URL
 require_once __DIR__ . '/../../config.php'; // Adjust path if needed
-// Must define: define('SITE_URL', 'https://www.grandjyothi.com/constructioninnagpur');
+// Site configuration
 
 $current_page = basename($_SERVER['PHP_SELF']);
 ?>
@@ -18,7 +18,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= isset($page_title) ? sanitizeOutput($page_title) . ' - ' : '' ?>Admin Panel</title>
+    <title><?= isset($page_title) ? sanitizeOutput($page_title) . ' - ' : '' ?>Rakhi Construction - Admin</title>
     
     <!-- Google Fonts - Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -38,7 +38,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
             <div class="sidebar-header">
                 <a href="<?= SITE_URL ?>/admin/dashboard.php" class="sidebar-logo">
                     <i data-feather="shield"></i>
-                    Admin Panel
+                    Rakhi Construction
                 </a>
             </div>
             

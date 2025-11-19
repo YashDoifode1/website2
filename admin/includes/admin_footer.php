@@ -2,7 +2,7 @@
             
             <!-- Footer -->
             <footer class="admin-footer">
-                <p>&copy; <?= date('Y') ?> Grand Jyothi Construction Admin Panel. All rights reserved.</p>
+                <p>&copy; <?= date('Y') ?> Rakhi Construction & Consultancy Pvt Ltd Admin Panel. All rights reserved.</p>
             </footer>
         </div>
     </div>

@@ -880,7 +880,7 @@ require_once __DIR__ . '/includes/header.php';
     <section class="section-padding bg-light-alt">
         <div class="container">
             <div class="text-center mb-5">
-                <h2 class="section-title">What Our Clients Say</h2>
+                <!-- <h2 class="section-title">What Our Clients Say</h2> -->
                 <p class="lead">Trusted by hundreds of happy homeowners</p>
             </div>
             <div class="row g-4">

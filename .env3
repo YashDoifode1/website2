@@ -2,14 +2,15 @@
 # Copy this file to .env and update with your actual values
 
 # Application Settings
-APP_NAME="Grand Jyothi Construction"
+APP_NAME="Rakhi Construction & Consultancy Pvt Ltd"
 APP_ENV=development
 APP_DEBUG=true
-APP_URL=https://codeaviary.html-5.me
+APP_URL=https://codeavairy.html-5.me
 
 # Contact Numbers
 WHATSAPP_NUMBER="+919075956483"
 PHONE_NUMBER="+919075956483"
+SECONDARY_PHONE="+919112841057"
 
 # Database Configuration
 DB_HOST=sql101.infinityfree.com
@@ -24,7 +25,7 @@ RECAPTCHA_SECRET_KEY=your-secret-key-here
 
 
 # Site Information
-SITE_NAME="Grand Jyothi Construction"
+SITE_NAME="Rakhi Construction & Consultancy Pvt Ltdn"
 SITE_TAGLINE="Building your vision with excellence and trust"
 SITE_DESCRIPTION="Leading construction company in Nagpur offering residential, commercial, and industrial construction services."
 SITE_KEYWORDS="construction, nagpur, residential, commercial, industrial, interior design, renovation"
@@ -81,3 +82,41 @@ ITEMS_PER_PAGE=12
 
 # Timezone
 TIMEZONE=Asia/Kolkata
+
+
+# Site Information
+; SITE_NAME="Grand Jyothi Construction"
+; SITE_TAGLINE="Building your vision with excellence and trust"
+; SITE_DESCRIPTION="Leading construction company in Nagpur offering residential, commercial, and industrial construction services."
+; SITE_KEYWORDS="construction, nagpur, residential, commercial, industrial, interior design, renovation"
+
+; # Contact Information
+; CONTACT_EMAIL="info@grandjyothi.com"
+; CONTACT_PHONE="+91 90759 56483"
+; CONTACT_ADDRESS="123 Construction Plaza, Dharampeth, Nagpur - 440010, Maharashtra, India"
+
+; # Social Media
+; FACEBOOK_URL="https://facebook.com/grandjyothi"
+; TWITTER_URL="https://twitter.com/grandjyothi"
+; INSTAGRAM_URL="https://instagram.com/grandjyothi"
+; LINKEDIN_URL="https://linkedin.com/company/grandjyothi"
+; YOUTUBE_URL="https://youtube.com/grandjyothi"
+; PINTEREST_URL="https://pinterest.com/grandjyothi"
+
+# Business Hours
+BUSINESS_HOURS_WEEKDAY="9:00 AM - 6:00 PM"
+BUSINESS_HOURS_SATURDAY="9:00 AM - 2:00 PM"
+BUSINESS_HOURS_SUNDAY="Closed"
+
+# Logo Settings
+SITE_LOGO_TEXT="Rakhi"
+SITE_LOGO_SUBTITLE="Construction"
+SHOW_LOGO_ICON="true"
+
+# Header Settings
+HEADER_STICKY="true"
+HEADER_TRANSPARENT="false"
+
+# Footer Settings
+FOOTER_SHOW_NEWSLETTER="true"
+FOOTER_COPYRIGHT="© 2023 Rakhi Construction & Consultancy Pvt Ltd. All rights reserved."

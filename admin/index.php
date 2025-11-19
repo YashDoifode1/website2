@@ -59,7 +59,7 @@ $page_title = 'Admin Login';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= $page_title ?> - Grand Jyothi Construction</title>
+    <title><?= $page_title ?> - Rakhi Construction & Consultancy Pvt Ltd</title>
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -411,7 +411,7 @@ $page_title = 'Admin Login';
             
             <div class="login-header">
                 <h1>Admin Panel</h1>
-                <p>Grand Jyothi Construction</p>
+                <p>Rakhi Construction & Consultancy Pvt Ltd</p>
             </div>
             
             <?php if ($error_message): ?>

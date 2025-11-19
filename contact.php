@@ -79,7 +79,6 @@ require_once __DIR__ . '/includes/header.php';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= sanitizeOutput($page_title) ?></title>
 
-    <!-- Bootstrap + Icons + Fonts -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
@@ -92,7 +91,6 @@ require_once __DIR__ . '/includes/header.php';
         body{font-family:'Roboto',sans-serif;color:var(--charcoal);background:var(--white);line-height:1.6;}
         h1,h2,h3,h4,h5,h6{font-family:'Poppins',sans-serif;font-weight:600;}
 
-        /* ==== BUTTONS ==== */
         .btn-primary{
             background:var(--primary-yellow);border-color:var(--primary-yellow);
             color:var(--charcoal);font-weight:600;padding:12px 30px;border-radius:8px;
@@ -109,7 +107,6 @@ require_once __DIR__ . '/includes/header.php';
             background:rgba(255,255,255,.1);border-color:var(--white);
         }
 
-        /* ==== HERO ==== */
         .contact-banner{
             height:500px;background:linear-gradient(rgba(26,26,26,.6),rgba(26,26,26,.6)),
             url('https://images.unsplash.com/photo-1541888946425-d81bb19240f5?ixlib=rb-4.0.3&auto=format&fit=crop&w=1770&q=80')
@@ -122,17 +119,14 @@ require_once __DIR__ . '/includes/header.php';
         .banner-title{font-size:3rem;margin-bottom:20px;line-height:1.2;}
         .banner-subtitle{font-size:1.2rem;opacity:.9;}
 
-        /* ==== BREADCRUMB ==== */
         .breadcrumb{background:transparent;padding:0;margin-bottom:20px;}
         .breadcrumb-item a{color:rgba(255,255,255,.8);text-decoration:none;}
         .breadcrumb-item.active{color:var(--primary-yellow);}
 
-        /* ==== CONTENT ==== */
         .contact-section{padding:80px 0;}
         .section-title{font-size:1.8rem;margin-bottom:30px;padding-bottom:15px;
             border-bottom:2px solid var(--primary-yellow);display:inline-block;}
 
-        /* ==== FORM ==== */
         .contact-form{
             background:var(--white);border-radius:10px;padding:40px;
             box-shadow:0 5px 15px rgba(0,0,0,.05);
@@ -146,14 +140,10 @@ require_once __DIR__ . '/includes/header.php';
             border-color:var(--primary-yellow);
             box-shadow:0 0 0 .25rem rgba(249,168,38,.25);
         }
-        .invalid-feedback{
-            color:#dc3545;font-size:.875rem;margin-top:-15px;margin-bottom:15px;display:none;
-        }
 
-        /* ==== CONTACT INFO ==== */
         .contact-info{
             background:var(--charcoal);color:var(--white);border-radius:10px;
-            padding:40px;height:100%;
+            padding:40px;height:100%;position:relative;
         }
         .contact-info h3{
             color:var(--primary-yellow);margin-bottom:25px;position:relative;
@@ -174,16 +164,48 @@ require_once __DIR__ . '/includes/header.php';
             text-align:center;margin-top:3px;
         }
 
-        /* ==== MAP ==== */
-        .map-container{
-            border-radius:10px;overflow:hidden;height:300px;margin-top:30px;
+        /* FIXED & IMPROVED GOOGLE MAPS SECTION */
+        .google-maps-section {
+            margin-top: 30px;
+            padding: 25px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            backdrop-filter: blur(5px);
         }
-        .map-placeholder{
-            background:#e9ecef;display:flex;align-items:center;justify-content:center;
-            color:#6c757d;height:100%;flex-direction:column;
+        .google-maps-section h4 {
+            color: var(--primary-yellow);
+            margin-bottom: 15px;
+            font-size: 1.25rem;
+        }
+        .map-wrapper {
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            height: 320px;
+            border: 3px solid var(--primary-yellow);
+        }
+        .map-wrapper iframe {
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+        .directions-btn {
+            display: block;
+            margin: 15px auto 0;
+            background: var(--primary-yellow);
+            color: var(--charcoal);
+            font-weight: 600;
+            padding: 10px 20px;
+            border-radius: 50px;
+            text-decoration: none;
+            width: fit-content;
+            transition: .3s;
+        }
+        .directions-btn:hover {
+            background: #e89a1f;
+            transform: translateY(-2px);
         }
 
-        /* ==== SIDEBAR ==== */
         .sidebar{
             background:var(--light-gray);border-radius:10px;padding:30px;margin-bottom:30px;
         }
@@ -208,19 +230,7 @@ require_once __DIR__ . '/includes/header.php';
         .category-list a:hover,.category-list a.active{
             color:var(--primary-yellow);font-weight:600;
         }
-        .popular-package{
-            display:flex;gap:12px;margin-bottom:15px;padding-bottom:15px;
-            border-bottom:1px solid #eee;
-        }
-        .popular-package:last-child{margin-bottom:0;padding-bottom:0;border:none;}
-        .popular-package-image{
-            width:60px;height:60px;border-radius:8px;overflow:hidden;flex-shrink:0;
-        }
-        .popular-package-image img{width:100%;height:100%;object-fit:cover;}
-        .popular-package-title a{color:var(--charcoal);font-weight:500;text-decoration:none;}
-        .popular-package-title a:hover{color:var(--primary-yellow);}
 
-        /* ==== FLOATING BUTTONS ==== */
         .floating-buttons{
             position:fixed;bottom:30px;right:30px;z-index:1000;display:flex;flex-direction:column;gap:12px;
         }
@@ -234,7 +244,6 @@ require_once __DIR__ . '/includes/header.php';
         .whatsapp-btn{background:#25D366;}
         .call-btn{background:var(--primary-yellow);color:var(--charcoal);}
 
-        /* ==== ALERTS ==== */
         .success-message,.error-message{
             padding:15px;border-radius:8px;margin-bottom:20px;
             text-align:center;font-weight:500;
@@ -242,29 +251,28 @@ require_once __DIR__ . '/includes/header.php';
         .success-message{background:#d4edda;color:#155724;border:1px solid #c3e6cb;}
         .error-message{background:#f8d7da;color:#721c24;border:1px solid #f5c6cb;}
 
-        /* ==== CTA ==== */
         .cta-section{
             background:linear-gradient(135deg,var(--charcoal) 0%,#2d2d2d 100%);
             color:var(--white);padding:80px 0;text-align:center;
         }
-        .cta-section h2{color:var(--white);margin-bottom:1.5rem;}
 
-        /* ==== RESPONSIVE ==== */
         @media (max-width:992px){
             .contact-banner{height:400px;padding:40px 0;}
             .banner-title{font-size:2.2rem;}
             .contact-section .row{flex-direction:column-reverse;}
             .contact-form,.contact-info{padding:25px;}
+            .map-wrapper{height:280px;}
         }
         @media (max-width:576px){
             .floating-buttons{bottom:20px;right:20px;gap:10px;}
             .floating-btn{width:50px;height:50px;font-size:1.2rem;}
+            .map-wrapper{height:250px;}
         }
     </style>
 </head>
 <body>
 
-<!-- ====================== HERO ====================== -->
+<!-- HERO -->
 <section class="contact-banner">
     <div class="container">
         <nav aria-label="breadcrumb">
@@ -278,24 +286,20 @@ require_once __DIR__ . '/includes/header.php';
     </div>
 </section>
 
-<!-- ====================== MAIN + ASIDE ====================== -->
+<!-- MAIN CONTENT -->
 <main class="contact-section">
     <div class="container">
         <div class="row g-5">
 
-            <!-- ==== MAIN: Contact Form ==== -->
+            <!-- Contact Form -->
             <div class="col-lg-8">
 
                 <?php if ($success_message): ?>
-                    <div class="success-message">
-                        <?= $success_message ?>
-                    </div>
+                    <div class="success-message"><?= $success_message ?></div>
                 <?php endif; ?>
 
                 <?php if ($error_message): ?>
-                    <div class="error-message">
-                        <?= $error_message ?>
-                    </div>
+                    <div class="error-message"><?= $error_message ?></div>
                 <?php endif; ?>
 
                 <div class="contact-form">
@@ -305,27 +309,19 @@ require_once __DIR__ . '/includes/header.php';
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label">First Name *</label>
-                                <input type="text" name="first_name" class="form-control" required
-                                       value="<?= sanitizeOutput($first_name ?? '') ?>">
-                                <div class="invalid-feedback">Valid first name required.</div>
+                                <input type="text" name="first_name" class="form-control" required value="<?= sanitizeOutput($first_name ?? '') ?>">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Last Name *</label>
-                                <input type="text" name="last_name" class="form-control" required
-                                       value="<?= sanitizeOutput($last_name ?? '') ?>">
-                                <div class="invalid-feedback">Valid last name required.</div>
+                                <input type="text" name="last_name" class="form-control" required value="<?= sanitizeOutput($last_name ?? '') ?>">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Email *</label>
-                                <input type="email" name="email" class="form-control" required
-                                       value="<?= sanitizeOutput($email ?? '') ?>">
-                                <div class="invalid-feedback">Valid email required.</div>
+                                <input type="email" name="email" class="form-control" required value="<?= sanitizeOutput($email ?? '') ?>">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Phone *</label>
-                                <input type="tel" name="phone" class="form-control" required
-                                       value="<?= sanitizeOutput($phone ?? '') ?>">
-                                <div class="invalid-feedback">Valid phone required.</div>
+                                <input type="tel" name="phone" class="form-control" required value="<?= sanitizeOutput($phone ?? '') ?>">
                             </div>
                             <div class="col-12">
                                 <label class="form-label">Project Type</label>
@@ -351,9 +347,7 @@ require_once __DIR__ . '/includes/header.php';
                             </div>
                             <div class="col-12">
                                 <label class="form-label">Project Details *</label>
-                                <textarea name="message" class="form-control" rows="5" required
-                                          placeholder="Describe your project, timeline, special needs..."><?= sanitizeOutput($message ?? '') ?></textarea>
-                                <div class="invalid-feedback">Message must be at least 20 characters.</div>
+                                <textarea name="message" class="form-control" rows="5" required placeholder="Describe your project, timeline, special needs..."><?= sanitizeOutput($message ?? '') ?></textarea>
                             </div>
                             <div class="col-12">
                                 <button type="submit" class="btn btn-primary w-100">Submit Request</button>
@@ -361,14 +355,13 @@ require_once __DIR__ . '/includes/header.php';
                         </div>
                     </form>
                 </div>
-
             </div>
 
-            <!-- ==== ASIDE: Contact Info + Sidebar ==== -->
+            <!-- Sidebar + Contact Info -->
             <aside class="col-lg-4">
                 <div class="sticky-top" style="top:2rem;">
 
-                    <!-- CONTACT INFO -->
+                    <!-- Contact Info Card -->
                     <div class="contact-info mb-4">
                         <h3>Get In Touch</h3>
                         <ul class="contact-details">
@@ -385,29 +378,36 @@ require_once __DIR__ . '/includes/header.php';
                                 <div><strong>Email</strong><br>info@grandjyothi.com<br>projects@grandjyothi.com</div>
                             </li>
                             <li><i class="fas fa-clock"></i>
-                                <div><strong>Hours</strong><br>Mon‑Fri: 9AM‑6PM<br>Sat: 9AM‑2PM<br>Sun: Closed</div>
+                                <div><strong>Hours</strong><br>Mon–Fri: 9AM–6PM<br>Sat: 9AM–2PM<br>Sun: Closed</div>
                             </li>
                         </ul>
 
-                        <div class="map-container">
-                            <div class="contact-method">
-                                <i class="fas fa-phone-alt"></i>
-                                <h4>Call Us</h4>
-                                <a href="tel:<?= preg_replace('/[^0-9+]/', '', PHONE_NUMBER) ?>"><?= CONTACT_PHONE ?></a>
+                        <!-- FIXED GOOGLE MAPS SECTION -->
+                        <div class="google-maps-section">
+                            <h4>Our Location</h4>
+                            <div class="map-wrapper">
+                                <iframe
+                                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3722.041903101081!2d79.0813923153313!3d21.105844085948203!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bd4bf2a6f9a8f0f%3A0x9e5e5e5e5e5e5e5e!2sRakhi%20Construction%20%26%20Consultancy%20Pvt%20Ltd!5e0!3m2!1sen!2sin!4v1630000000000!5m2!1sen!2sin"
+                                    allowfullscreen=""
+                                    loading="lazy"
+                                    referrerpolicy="no-referrer-when-downgrade">
+                                </iframe>
                             </div>
+                            <a href="https://maps.app.goo.gl/5962MWFdiDSx4h1t6" target="_blank" class="directions-btn">
+                                Get Directions
+                            </a>
                         </div>
                     </div>
 
-                    <!-- SEARCH -->
+                    <!-- Search & Categories -->
                     <div class="sidebar">
                         <h3 class="sidebar-title">Search Packages</h3>
                         <form action="<?= SITE_URL ?>/packages.php" method="get" class="search-box">
                             <input type="text" name="search" placeholder="Search packages..." value="<?= sanitizeOutput($_GET['search'] ?? '') ?>">
-                            <button type="submit"><i class="fas fa-search"></i></button>
+                            <button type="submit">Search</button>
                         </form>
                     </div>
 
-                    <!-- CATEGORIES -->
                     <div class="sidebar">
                         <h3 class="sidebar-title">Categories</h3>
                         <ul class="category-list">
@@ -425,48 +425,23 @@ require_once __DIR__ . '/includes/header.php';
                         </ul>
                     </div>
 
-                    <!-- POPULAR PACKAGES (Uncomment when images are ready) -->
-                    <!-- <div class="sidebar">
-                        <h3 class="sidebar-title">Popular Packages</h3>
-                        <?php foreach ($popular_packages as $p): ?>
-                            <div class="popular-package">
-                                <div class="popular-package-image">
-                                    <img src="https://via.placeholder.com/60" alt="<?= sanitizeOutput($p['title']) ?>">
-                                </div>
-                                <div>
-                                    <div class="popular-package-title">
-                                        <a href="<?= SITE_URL ?>/select-plan.php?plan=<?= urlencode($p['title']) ?>">
-                                            <?= sanitizeOutput($p['title']) ?>
-                                        </a>
-                                    </div>
-                                    <small class="text-muted">
-                                        <?php if ($p['price_per_sqft'] > 0): ?>
-                                            ₹<?= number_format((float)$p['price_per_sqft']) ?>/sq.ft
-                                        <?php else: ?> Custom <?php endif; ?>
-                                    </small>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    </div> -->
-
                 </div>
             </aside>
-
         </div>
     </div>
 </main>
 
-<!-- ====================== FLOATING BUTTONS ====================== -->
+<!-- Floating Buttons -->
 <div class="floating-buttons">
     <a href="https://wa.me/<?= preg_replace('/[^0-9]/', '', WHATSAPP_NUMBER) ?>" target="_blank" class="floating-btn whatsapp-btn" title="Chat on WhatsApp">
-        <i class="fab fa-whatsapp"></i>
+        WhatsApp
     </a>
     <a href="tel:<?= preg_replace('/[^0-9+]/', '', PHONE_NUMBER) ?>" class="floating-btn call-btn" title="Call Us">
-        <i class="fas fa-phone"></i>
+        Call
     </a>
 </div>
 
-<!-- ====================== CTA ====================== -->
+<!-- CTA -->
 <section class="cta-section">
     <div class="container">
         <div class="row justify-content-center text-center">
@@ -474,12 +449,8 @@ require_once __DIR__ . '/includes/header.php';
                 <h2 class="display-5 fw-bold mb-4">Ready to Build Your Dream?</h2>
                 <p class="lead mb-4">Let’s discuss your vision and create something extraordinary together</p>
                 <div class="d-flex justify-content-center gap-3 flex-wrap">
-                    <a href="<?= SITE_URL ?>/contact.php" class="btn btn-primary btn-lg">
-                        Get Free Consultation
-                    </a>
-                    <a href="<?= SITE_URL ?>/packages.php" class="btn btn-outline-light btn-lg">
-                        View All Packages
-                    </a>
+                    <a href="<?= SITE_URL ?>/contact.php" class="btn btn-primary btn-lg">Get Free Consultation</a>
+                    <a href="<?= SITE_URL ?>/packages.php" class="btn btn-outline-light btn-lg">View All Packages</a>
                 </div>
             </div>
         </div>
@@ -493,14 +464,11 @@ document.getElementById('consultationForm')?.addEventListener('submit', function
     let ok = true;
     ['first_name','last_name','email','phone','message'].forEach(id => {
         const el = document.querySelector(`[name="${id}"]`);
-        const fb = el.nextElementSibling?.classList?.contains('invalid-feedback') ? el.nextElementSibling : null;
         if (!el.value.trim()) {
             el.classList.add('is-invalid');
-            if (fb) fb.style.display = 'block';
             ok = false;
         } else {
             el.classList.remove('is-invalid');
-            if (fb) fb.style.display = 'none';
         }
     });
     if (!ok) e.preventDefault();

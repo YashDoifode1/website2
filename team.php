@@ -1,6 +1,6 @@
 <?php
 /**
- * Team Page – Grand Jyothi Construction
+ * Team Page – Rakhi Construction & Consultancy
  * 100% aligned with the rest of the site
  */
 
@@ -9,7 +9,7 @@ require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/security.php';
 require_once __DIR__ . '/config.php';
 
-$page_title = 'Our Team | Grand Jyothi Construction';
+$page_title = 'Our Team | Rakhi Construction & Consultancy';
 
 // ---------- 1. Fetch team members ----------
 $sql = "SELECT name, role, photo, bio, expertise, linkedin, email 
