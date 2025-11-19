@@ -164,6 +164,132 @@ try {
 require_once __DIR__ . '/includes/admin_header.php';
 ?>
 
+<style>
+/* Search and scrollbar styles */
+.search-container {
+    margin-bottom: 1rem;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.search-box {
+    position: relative;
+    flex: 1;
+    max-width: 400px;
+}
+
+.search-box input {
+    width: 100%;
+    padding: 10px 40px 10px 15px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.3s ease;
+}
+
+.search-box input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.search-icon {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #666;
+}
+
+.recipients-container {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+/* Custom scrollbar styling */
+.recipients-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.recipients-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 0 8px 8px 0;
+}
+
+.recipients-container::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.recipients-container::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+.search-stats {
+    color: #666;
+    font-size: 14px;
+    margin-left: auto;
+}
+
+.clear-search {
+    background: #6b7280;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.clear-search:hover {
+    background: #4b5563;
+}
+
+.recipient-item {
+    padding: 12px;
+    border-bottom: 1px solid #f1f1f1;
+    transition: background-color 0.2s ease;
+}
+
+.recipient-item:hover {
+    background-color: #f8f9fa;
+}
+
+.recipient-item:last-child {
+    border-bottom: none;
+}
+
+.recipient-item.highlight {
+    background-color: #e3f2fd;
+    border-left: 3px solid #2196f3;
+}
+
+@media (max-width: 768px) {
+    .search-container {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .search-box {
+        max-width: 100%;
+    }
+    
+    .search-stats {
+        margin-left: 0;
+        text-align: center;
+    }
+    
+    .recipients-container {
+        max-height: 300px;
+    }
+}
+</style>
+
 <div class="admin-header">
     <h1>Email Notifications</h1>
     <p>Send updates to your clients and leads</p>
@@ -262,20 +388,38 @@ require_once __DIR__ . '/includes/admin_header.php';
                 </label>
             </div>
             
-            <div class="recipients-list border rounded p-3" style="max-height: 320px; overflow-y: auto;">
+            <!-- Search Box -->
+            <div class="search-container">
+                <div class="search-box">
+                    <input type="text" id="recipientSearch" placeholder="Search recipients by name or email...">
+                    <span class="search-icon">
+                        <i data-feather="search"></i>
+                    </span>
+                </div>
+                <div class="search-stats">
+                    <span id="searchResultsCount"><?= count($contacts) ?></span> recipients found
+                </div>
+                <button type="button" class="clear-search" id="clearSearch" style="display: none;">
+                    Clear Search
+                </button>
+            </div>
+            
+            <div class="recipients-container">
                 <?php if (empty($contacts)): ?>
                     <p class="text-muted mb-0">No contacts yet. They appear here after form submissions.</p>
                 <?php else: ?>
                     <?php foreach ($contacts as $contact): 
                         $full_name = trim($contact['first_name'] . ' ' . $contact['last_name']);
                     ?>
-                        <label class="form-check d-block p-2 border-bottom">
-                            <input type="checkbox" name="recipients[]" value="<?= $contact['id'] ?>" class="form-check-input recipient-checkbox">
-                            <span class="form-check-label">
-                                <strong><?= sanitizeOutput($full_name) ?></strong><br>
-                                <small class="text-muted"><?= sanitizeOutput($contact['email']) ?></small>
-                            </span>
-                        </label>
+                        <div class="recipient-item" data-name="<?= sanitizeOutput(strtolower($full_name)) ?>" data-email="<?= sanitizeOutput(strtolower($contact['email'])) ?>">
+                            <label class="form-check d-block mb-0">
+                                <input type="checkbox" name="recipients[]" value="<?= $contact['id'] ?>" class="form-check-input recipient-checkbox">
+                                <span class="form-check-label">
+                                    <strong><?= sanitizeOutput($full_name) ?></strong><br>
+                                    <small class="text-muted"><?= sanitizeOutput($contact['email']) ?></small>
+                                </span>
+                            </label>
+                        </div>
                     <?php endforeach; ?>
                 <?php endif; ?>
             </div>
@@ -319,19 +463,77 @@ require_once __DIR__ . '/includes/admin_header.php';
 </div>
 
 <script>
-document.getElementById('emailType').addEventListener('change', function() {
-    document.getElementById('blogSelection').style.display = 'none';
-    document.getElementById('constructionFields').style.display = 'none';
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('recipientSearch');
+    const clearSearchBtn = document.getElementById('clearSearch');
+    const searchResultsCount = document.getElementById('searchResultsCount');
+    const recipientItems = document.querySelectorAll('.recipient-item');
+    const totalRecipients = <?= count($contacts) ?>;
     
-    if (this.value === 'blog_notification') {
-        document.getElementById('blogSelection').style.display = 'block';
-    } else if (this.value === 'construction_update') {
-        document.getElementById('constructionFields').style.display = 'block';
+    // Search functionality
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase().trim();
+            let visibleCount = 0;
+            
+            recipientItems.forEach(item => {
+                const name = item.getAttribute('data-name');
+                const email = item.getAttribute('data-email');
+                
+                const matches = name.includes(searchTerm) || email.includes(searchTerm);
+                
+                item.style.display = matches ? 'block' : 'none';
+                if (matches) {
+                    visibleCount++;
+                    // Highlight matching text
+                    if (searchTerm) {
+                        item.classList.add('highlight');
+                    } else {
+                        item.classList.remove('highlight');
+                    }
+                } else {
+                    item.classList.remove('highlight');
+                }
+            });
+            
+            // Update results count
+            searchResultsCount.textContent = visibleCount;
+            
+            // Show/hide clear button
+            clearSearchBtn.style.display = searchTerm ? 'block' : 'none';
+        });
+        
+        // Clear search functionality
+        clearSearchBtn.addEventListener('click', function() {
+            searchInput.value = '';
+            searchInput.dispatchEvent(new Event('input'));
+            searchInput.focus();
+        });
     }
-});
-
-document.getElementById('selectAll').addEventListener('change', function() {
-    document.querySelectorAll('.recipient-checkbox').forEach(cb => cb.checked = this.checked);
+    
+    // Email type toggle
+    document.getElementById('emailType').addEventListener('change', function() {
+        document.getElementById('blogSelection').style.display = 'none';
+        document.getElementById('constructionFields').style.display = 'none';
+        
+        if (this.value === 'blog_notification') {
+            document.getElementById('blogSelection').style.display = 'block';
+        } else if (this.value === 'construction_update') {
+            document.getElementById('constructionFields').style.display = 'block';
+        }
+    });
+    
+    // Select all functionality
+    document.getElementById('selectAll').addEventListener('change', function() {
+        document.querySelectorAll('.recipient-checkbox').forEach(cb => {
+            cb.checked = this.checked;
+        });
+    });
+    
+    // Initialize Feather icons
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
 });
 
 function previewEmail() {

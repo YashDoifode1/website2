@@ -10,7 +10,6 @@ declare(strict_types=1);
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/settings.php';
-require_once __DIR__ . '/../config.php';
 
 requireAdmin();
 
@@ -48,7 +47,7 @@ $settings = getAllSettings();
 require_once __DIR__ . '/includes/admin_header.php';
 ?>
 
-<div class="content-header">
+<div class="admin-header">
     <h1>Site Settings</h1>
     <p>Manage site-wide configuration, contact information, and branding</p>
 </div>
@@ -67,208 +66,188 @@ require_once __DIR__ . '/includes/admin_header.php';
     </div>
 <?php endif; ?>
 
-<form method="POST" action="">
+<form method="POST" id="settingsForm">
+    
     <!-- General Settings -->
-    <div class="card mb-lg">
-        <div class="card-header">
-            <h2 class="card-title">General Settings</h2>
-        </div>
+    <div class="card">
+        <h2>General Settings</h2>
         
         <div class="form-grid">
             <div class="form-group">
-                <label for="site_name" class="form-label">Site Name *</label>
-                <input type="text" 
-                       id="site_name" 
-                       name="site_name" 
-                       class="form-input"
-                       value="<?= sanitizeOutput($settings['site_name'] ?? 'Grand Jyothi Construction') ?>"
-                       required>
+                <label class="form-label">Site Name *</label>
+                <input type="text" name="site_name" class="form-input"
+                       value="<?= sanitizeOutput($settings['site_name'] ?? 'Grand Jyothi Construction') ?>" required>
             </div>
             
             <div class="form-group">
-                <label for="site_tagline" class="form-label">Site Tagline</label>
-                <input type="text" 
-                       id="site_tagline" 
-                       name="site_tagline" 
-                       class="form-input"
+                <label class="form-label">Site Tagline</label>
+                <input type="text" name="site_tagline" class="form-input"
                        value="<?= sanitizeOutput($settings['site_tagline'] ?? '') ?>">
             </div>
         </div>
         
         <div class="form-group">
-            <label for="company_description" class="form-label">Company Description</label>
-            <textarea id="company_description" 
-                      name="company_description" 
-                      class="form-textarea"
-                      rows="4"><?= sanitizeOutput($settings['company_description'] ?? '') ?></textarea>
-            <p class="form-help">This appears in the footer and about sections</p>
+            <label class="form-label">Company Description</label>
+            <textarea name="company_description" class="form-textarea" rows="4"><?= sanitizeOutput($settings['company_description'] ?? '') ?></textarea>
+            <small class="form-help">This appears in the footer and about sections</small>
         </div>
     </div>
 
     <!-- Branding -->
-    <div class="card mb-lg">
-        <div class="card-header">
-            <h2 class="card-title">Branding</h2>
-        </div>
+    <div class="card">
+        <h2>Branding</h2>
         
         <div class="form-grid">
             <div class="form-group">
-                <label for="site_logo" class="form-label">Logo Filename</label>
-                <input type="text" 
-                       id="site_logo" 
-                       name="site_logo" 
-                       class="form-input"
+                <label class="form-label">Logo Filename</label>
+                <input type="text" name="site_logo" class="form-input"
                        value="<?= sanitizeOutput($settings['site_logo'] ?? 'logo.png') ?>"
                        placeholder="logo.png">
-                <p class="form-help">Upload logo to /assets/images/ folder</p>
+                <small class="form-help">Upload logo to /assets/images/ folder</small>
             </div>
             
             <div class="form-group">
-                <label for="site_favicon" class="form-label">Favicon Filename</label>
-                <input type="text" 
-                       id="site_favicon" 
-                       name="site_favicon" 
-                       class="form-input"
+                <label class="form-label">Favicon Filename</label>
+                <input type="text" name="site_favicon" class="form-input"
                        value="<?= sanitizeOutput($settings['site_favicon'] ?? 'favicon.ico') ?>"
                        placeholder="favicon.ico">
-                <p class="form-help">Upload favicon to root folder</p>
+                <small class="form-help">Upload favicon to root folder</small>
             </div>
         </div>
     </div>
 
     <!-- Contact Information -->
-    <div class="card mb-lg">
-        <div class="card-header">
-            <h2 class="card-title">Contact Information</h2>
-        </div>
+    <div class="card">
+        <h2>Contact Information</h2>
         
         <div class="form-grid">
             <div class="form-group">
-                <label for="contact_email" class="form-label">Email Address *</label>
-                <input type="email" 
-                       id="contact_email" 
-                       name="contact_email" 
-                       class="form-input"
-                       value="<?= sanitizeOutput($settings['contact_email'] ?? '') ?>"
-                       required>
+                <label class="form-label">Email Address *</label>
+                <input type="email" name="contact_email" class="form-input"
+                       value="<?= sanitizeOutput($settings['contact_email'] ?? '') ?>" required>
             </div>
             
             <div class="form-group">
-                <label for="contact_phone" class="form-label">Phone Number *</label>
-                <input type="text" 
-                       id="contact_phone" 
-                       name="contact_phone" 
-                       class="form-input"
-                       value="<?= sanitizeOutput($settings['contact_phone'] ?? '') ?>"
-                       required>
+                <label class="form-label">Phone Number *</label>
+                <input type="text" name="contact_phone" class="form-input"
+                       value="<?= sanitizeOutput($settings['contact_phone'] ?? '') ?>" required>
             </div>
         </div>
         
         <div class="form-group">
-            <label for="contact_address" class="form-label">Address</label>
-            <textarea id="contact_address" 
-                      name="contact_address" 
-                      class="form-textarea"
-                      rows="3"><?= sanitizeOutput($settings['contact_address'] ?? '') ?></textarea>
+            <label class="form-label">Address</label>
+            <textarea name="contact_address" class="form-textarea" rows="3"><?= sanitizeOutput($settings['contact_address'] ?? '') ?></textarea>
         </div>
     </div>
 
     <!-- Social Media Links -->
-    <div class="card mb-lg">
-        <div class="card-header">
-            <h2 class="card-title">Social Media Links</h2>
-        </div>
+    <div class="card">
+        <h2>Social Media Links</h2>
         
         <div class="form-grid">
             <div class="form-group">
-                <label for="facebook_url" class="form-label">Facebook URL</label>
-                <input type="url" 
-                       id="facebook_url" 
-                       name="facebook_url" 
-                       class="form-input"
+                <label class="form-label">Facebook URL</label>
+                <input type="url" name="facebook_url" class="form-input"
                        value="<?= sanitizeOutput($settings['facebook_url'] ?? '') ?>"
                        placeholder="https://facebook.com/yourpage">
             </div>
             
             <div class="form-group">
-                <label for="twitter_url" class="form-label">Twitter URL</label>
-                <input type="url" 
-                       id="twitter_url" 
-                       name="twitter_url" 
-                       class="form-input"
+                <label class="form-label">Twitter URL</label>
+                <input type="url" name="twitter_url" class="form-input"
                        value="<?= sanitizeOutput($settings['twitter_url'] ?? '') ?>"
                        placeholder="https://twitter.com/yourhandle">
             </div>
             
             <div class="form-group">
-                <label for="instagram_url" class="form-label">Instagram URL</label>
-                <input type="url" 
-                       id="instagram_url" 
-                       name="instagram_url" 
-                       class="form-input"
+                <label class="form-label">Instagram URL</label>
+                <input type="url" name="instagram_url" class="form-input"
                        value="<?= sanitizeOutput($settings['instagram_url'] ?? '') ?>"
                        placeholder="https://instagram.com/yourprofile">
             </div>
             
             <div class="form-group">
-                <label for="linkedin_url" class="form-label">LinkedIn URL</label>
-                <input type="url" 
-                       id="linkedin_url" 
-                       name="linkedin_url" 
-                       class="form-input"
+                <label class="form-label">LinkedIn URL</label>
+                <input type="url" name="linkedin_url" class="form-input"
                        value="<?= sanitizeOutput($settings['linkedin_url'] ?? '') ?>"
                        placeholder="https://linkedin.com/company/yourcompany">
             </div>
         </div>
     </div>
 
-    <!-- Statistics -->
-    <div class="card mb-lg">
-        <div class="card-header">
-            <h2 class="card-title">Company Statistics</h2>
-        </div>
+    <!-- Company Statistics -->
+    <div class="card">
+        <h2>Company Statistics</h2>
         
         <div class="form-grid">
             <div class="form-group">
-                <label for="years_experience" class="form-label">Years of Experience</label>
-                <input type="number" 
-                       id="years_experience" 
-                       name="years_experience" 
-                       class="form-input"
-                       value="<?= sanitizeOutput($settings['years_experience'] ?? '18') ?>"
-                       min="0">
+                <label class="form-label">Years of Experience</label>
+                <input type="number" name="years_experience" class="form-input"
+                       value="<?= sanitizeOutput($settings['years_experience'] ?? '18') ?>" min="0">
             </div>
             
             <div class="form-group">
-                <label for="projects_completed" class="form-label">Projects Completed</label>
-                <input type="number" 
-                       id="projects_completed" 
-                       name="projects_completed" 
-                       class="form-input"
-                       value="<?= sanitizeOutput($settings['projects_completed'] ?? '500') ?>"
-                       min="0">
+                <label class="form-label">Projects Completed</label>
+                <input type="number" name="projects_completed" class="form-input"
+                       value="<?= sanitizeOutput($settings['projects_completed'] ?? '500') ?>" min="0">
             </div>
             
             <div class="form-group">
-                <label for="happy_clients" class="form-label">Happy Clients</label>
-                <input type="number" 
-                       id="happy_clients" 
-                       name="happy_clients" 
-                       class="form-input"
-                       value="<?= sanitizeOutput($settings['happy_clients'] ?? '450') ?>"
-                       min="0">
+                <label class="form-label">Happy Clients</label>
+                <input type="number" name="happy_clients" class="form-input"
+                       value="<?= sanitizeOutput($settings['happy_clients'] ?? '450') ?>" min="0">
             </div>
         </div>
         
-        <p class="form-help">These numbers appear on the projects page statistics section</p>
+        <small class="form-help">These numbers appear on the projects page statistics section</small>
     </div>
 
-    <!-- Save Button -->
-    <div class="btn-group">
-        <button type="submit" name="submit" class="btn btn-primary">
-            <i data-feather="save"></i> Save All Settings
+    <!-- Submit Buttons -->
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">
+            Save All Settings
+        </button>
+        <button type="button" class="btn btn-secondary" onclick="window.location.reload()">
+            Cancel
         </button>
     </div>
 </form>
+
+<style>
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid #e2e8f0;
+}
+</style>
+
+<script>
+// Simple client-side validation
+document.getElementById('settingsForm').addEventListener('submit', function(e) {
+    const required = this.querySelectorAll('[required]');
+    let valid = true;
+    required.forEach(field => {
+        if (!field.value.trim()) {
+            field.style.borderColor = '#ef4444';
+            valid = false;
+        } else {
+            field.style.borderColor = '';
+        }
+    });
+    
+    if (!valid) {
+        e.preventDefault();
+        alert('Please fill in all required fields.');
+    }
+});
+</script>
 
 <?php require_once __DIR__ . '/includes/admin_footer.php'; ?>

@@ -75,6 +75,112 @@ if ($action === 'list') {
 require_once __DIR__ . '/includes/admin_header.php';
 ?>
 
+<style>
+/* Search and scrollbar styles - keeping original design intact */
+.search-container {
+    margin-bottom: 1.5rem;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.search-box {
+    position: relative;
+    flex: 1;
+    max-width: 400px;
+}
+
+.search-box input {
+    width: 100%;
+    padding: 10px 40px 10px 15px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.3s ease;
+}
+
+.search-box input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.search-icon {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #666;
+}
+
+.table-container {
+    max-height: 600px;
+    overflow-y: auto;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+}
+
+.table-container table {
+    margin-bottom: 0;
+}
+
+/* Custom scrollbar styling */
+.table-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.table-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 0 8px 8px 0;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+.search-stats {
+    color: #666;
+    font-size: 14px;
+    margin-left: auto;
+}
+
+.clear-search {
+    background: #6b7280;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.clear-search:hover {
+    background: #4b5563;
+}
+
+@media (max-width: 768px) {
+    .search-container {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .search-box {
+        max-width: 100%;
+    }
+    
+    .search-stats {
+        margin-left: 0;
+        text-align: center;
+    }
+}
+</style>
+
 <div class="content-header">
     <h1>Contact Messages</h1>
     <p>View and manage all customer inquiries from the contact form</p>
@@ -107,8 +213,24 @@ require_once __DIR__ . '/includes/admin_header.php';
                 <p class="mt-3">No messages yet. New inquiries will appear here.</p>
             </div>
         <?php else: ?>
+            <!-- Search Box -->
+            <div class="search-container p-4 border-bottom">
+                <div class="search-box">
+                    <input type="text" id="messageSearch" placeholder="Search messages by name, email, phone, project type, or message content...">
+                    <span class="search-icon">
+                        <i data-feather="search"></i>
+                    </span>
+                </div>
+                <div class="search-stats">
+                    <span id="searchResultsCount"><?= count($messages) ?></span> messages found
+                </div>
+                <button type="button" class="clear-search" id="clearSearch" style="display: none;">
+                    Clear Search
+                </button>
+            </div>
+
             <div class="table-container">
-                <table class="admin-table">
+                <table class="admin-table" id="messagesTable">
                     <thead>
                         <tr>
                             <th>Date</th>
@@ -126,25 +248,25 @@ require_once __DIR__ . '/includes/admin_header.php';
                         <?php foreach ($messages as $msg): 
                             $full_name = trim($msg['first_name'] . ' ' . $msg['last_name']);
                         ?>
-                            <tr>
+                            <tr class="message-row">
                                 <td data-label="Date">
                                     <?= date('M d, Y', strtotime($msg['submitted_at'])) ?><br>
                                     <small class="text-muted"><?= date('H:i', strtotime($msg['submitted_at'])) ?></small>
                                 </td>
-                                <td data-label="Name">
+                                <td data-label="Name" class="searchable-name">
                                     <strong><?= sanitizeOutput($full_name) ?></strong>
                                 </td>
-                                <td data-label="Email">
+                                <td data-label="Email" class="searchable-email">
                                     <a href="mailto:<?= sanitizeOutput($msg['email']) ?>" class="text-primary">
                                         <?= sanitizeOutput($msg['email']) ?>
                                     </a>
                                 </td>
-                                <td data-label="Phone">
+                                <td data-label="Phone" class="searchable-phone">
                                     <a href="tel:<?= sanitizeOutput($msg['phone']) ?>" class="text-primary">
                                         <?= sanitizeOutput($msg['phone']) ?>
                                     </a>
                                 </td>
-                                <td data-label="Project Type">
+                                <td data-label="Project Type" class="searchable-project">
                                     <?= $msg['project_type'] ? sanitizeOutput($msg['project_type']) : '<span class="text-muted">—</span>' ?>
                                 </td>
                                 <td data-label="Budget">
@@ -153,7 +275,7 @@ require_once __DIR__ . '/includes/admin_header.php';
                                 <td data-label="Plan">
                                     <?= $msg['selected_plan'] ? '<strong>' . sanitizeOutput($msg['selected_plan']) . '</strong>' : '<span class="text-muted">—</span>' ?>
                                 </td>
-                                <td data-label="Message">
+                                <td data-label="Message" class="searchable-message">
                                     <?= sanitizeOutput(substr(strip_tags($msg['message']), 0, 60)) ?>
                                     <?= strlen(strip_tags($msg['message'])) > 60 ? '...' : '' ?>
                                 </td>
@@ -277,5 +399,60 @@ require_once __DIR__ . '/includes/admin_header.php';
         </div>
     </div>
 <?php endif; ?>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('messageSearch');
+    const clearSearchBtn = document.getElementById('clearSearch');
+    const searchResultsCount = document.getElementById('searchResultsCount');
+    const messageRows = document.querySelectorAll('.message-row');
+    const totalMessages = <?= count($messages) ?>;
+    
+    if (searchInput) {
+        // Search functionality
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase().trim();
+            let visibleCount = 0;
+            
+            messageRows.forEach(row => {
+                const name = row.querySelector('.searchable-name').textContent.toLowerCase();
+                const email = row.querySelector('.searchable-email').textContent.toLowerCase();
+                const phone = row.querySelector('.searchable-phone').textContent.toLowerCase();
+                const project = row.querySelector('.searchable-project').textContent.toLowerCase();
+                const message = row.querySelector('.searchable-message').textContent.toLowerCase();
+                
+                const matches = name.includes(searchTerm) || 
+                              email.includes(searchTerm) || 
+                              phone.includes(searchTerm) || 
+                              project.includes(searchTerm) || 
+                              message.includes(searchTerm);
+                
+                row.style.display = matches ? '' : 'none';
+                if (matches) visibleCount++;
+            });
+            
+            // Update results count
+            searchResultsCount.textContent = visibleCount;
+            
+            // Show/hide clear button
+            clearSearchBtn.style.display = searchTerm ? 'block' : 'none';
+        });
+        
+        // Clear search functionality
+        clearSearchBtn.addEventListener('click', function() {
+            searchInput.value = '';
+            searchInput.dispatchEvent(new Event('input'));
+        });
+        
+        // Focus search input on page load
+        searchInput.focus();
+    }
+    
+    // Initialize Feather icons
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+});
+</script>
 
 <?php require_once __DIR__ . '/includes/admin_footer.php'; ?>
