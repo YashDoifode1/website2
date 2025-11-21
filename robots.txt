@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /includes/
+Disallow: /assets/vendor/
+
+Sitemap: https://rakhiconstruction.com/sitemap.xml

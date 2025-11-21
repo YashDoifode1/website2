@@ -31,23 +31,90 @@ $nav_items = [
 ?>
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" prefix="og: https://ogp.me/ns#">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     
-    <title><?= isset($page_title) ? sanitizeOutput($page_title) . ' - ' : '' ?><?= sanitizeOutput(SITE_NAME) ?></title>
-    <meta name="description" content="<?= sanitizeOutput(SITE_DESCRIPTION) ?>">
-    <meta name="keywords" content="<?= sanitizeOutput(SITE_KEYWORDS) ?>">
+    <!-- Primary Meta Tags -->
+    <title><?= isset($page_title) ? sanitizeOutput($page_title) . ' | ' : '' ?><?= sanitizeOutput(SITE_NAME) ?> - <?= sanitizeOutput(SITE_TAGLINE) ?></title>
+    <meta name="description" content="<?= isset($meta_description) ? sanitizeOutput($meta_description) : sanitizeOutput(SITE_DESCRIPTION) ?>">
+    <meta name="keywords" content="<?= isset($meta_keywords) ? sanitizeOutput($meta_keywords) : sanitizeOutput(SITE_KEYWORDS) ?>">
     <meta name="author" content="<?= sanitizeOutput(SITE_NAME) ?>">
-    <meta name="robots" content="index, follow">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <link rel="canonical" href="<?= sanitizeOutput($current_url) ?>" />
 
     <!-- Open Graph / Facebook -->
-    <meta property="og:title" content="<?= isset($page_title) ? sanitizeOutput($page_title) . ' - ' : '' ?><?= sanitizeOutput(SITE_NAME) ?>">
-    <meta property="og:description" content="<?= sanitizeOutput(SITE_DESCRIPTION) ?>">
+    <meta property="og:locale" content="en_IN">
     <meta property="og:type" content="website">
+    <meta property="og:title" content="<?= isset($page_title) ? sanitizeOutput($page_title) . ' | ' : '' ?><?= sanitizeOutput(SITE_NAME) ?>">
+    <meta property="og:description" content="<?= isset($meta_description) ? sanitizeOutput($meta_description) : sanitizeOutput(SITE_DESCRIPTION) ?>">
     <meta property="og:url" content="<?= sanitizeOutput($current_url) ?>">
     <meta property="og:site_name" content="<?= sanitizeOutput(SITE_NAME) ?>">
+    <meta property="og:image" content="<?= SITE_URL ?>/assets/images/og-image.jpg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="<?= sanitizeOutput(SITE_NAME) ?> - <?= sanitizeOutput(SITE_TAGLINE) ?>">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="<?= isset($page_title) ? sanitizeOutput($page_title) . ' | ' : '' ?><?= sanitizeOutput(SITE_NAME) ?>">
+    <meta name="twitter:description" content="<?= isset($meta_description) ? sanitizeOutput($meta_description) : sanitizeOutput(SITE_DESCRIPTION) ?>">
+    <meta name="twitter:image" content="<?= SITE_URL ?>/assets/images/og-image.jpg">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="<?= SITE_URL ?>/assets/images/favicon.png">
+    <link rel="apple-touch-icon" href="<?= SITE_URL ?>/assets/images/apple-touch-icon.png">
+    <meta name="theme-color" content="#F9A826">
+
+    <!-- Preload Critical Resources -->
+    <link rel="preload" href="<?= SITE_URL ?>/assets/css/global-styles.css" as="style">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <!-- Structured Data / Schema.org -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "LocalBusiness",
+        "@id": "<?= SITE_URL ?>#organization",
+        "name": "<?= addslashes(SITE_NAME) ?>",
+        "url": "<?= SITE_URL ?>",
+        "logo": "<?= SITE_URL ?>/assets/images/logo.png",
+        "description": "<?= addslashes(SITE_DESCRIPTION) ?>",
+        "address": {
+            "@type": "PostalAddress",
+            "streetAddress": "PL NO 55, CHAKRADHAR HO NEAR NAGAR PANCHAYAT BAHADURA ROAD",
+            "addressLocality": "Nagpur",
+            "addressRegion": "Maharashtra",
+            "postalCode": "440034",
+            "addressCountry": "IN"
+        },
+        "geo": {
+            "@type": "GeoCoordinates",
+            "latitude": "21.1458",
+            "longitude": "79.0882"
+        },
+        "telephone": "<?= CONTACT_PHONE ?>",
+        "email": "<?= CONTACT_EMAIL ?>",
+        "openingHoursSpecification": [{
+            "@type": "OpeningHoursSpecification",
+            "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+            "opens": "09:00",
+            "closes": "18:00"
+        }, {
+            "@type": "OpeningHoursSpecification",
+            "dayOfWeek": "Saturday",
+            "opens": "09:00",
+            "closes": "14:00"
+        }],
+        "sameAs": [
+            "<?= !empty(SOCIAL_MEDIA['facebook']['url']) ? SOCIAL_MEDIA['facebook']['url'] : '#' ?>",
+            "<?= !empty(SOCIAL_MEDIA['twitter']['url']) ? SOCIAL_MEDIA['twitter']['url'] : '#' ?>"
+        ]
+    }
+    </script>
     <meta property="og:image" content="<?= SITE_URL ?>/assets/images/og-image.jpg">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">

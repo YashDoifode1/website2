@@ -1,7 +1,7 @@
 {
-  "name": "<?= sanitizeOutput(SITE_NAME) ?>",
-  "short_name": "YourBrand",
-  "description": "<?= sanitizeOutput(SITE_DESCRIPTION) ?>",
+  "name": "Rakhi Construction",
+  "short_name": "RCC-GROUP",
+  "description": "Leading construction company in Nagpur offering residential, commercial, and industrial construction services",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
