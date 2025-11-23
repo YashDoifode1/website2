@@ -38,7 +38,20 @@ $nav_items = [
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     
     <!-- Primary Meta Tags -->
-    <title><?= isset($page_title) ? sanitizeOutput($page_title) . ' | ' : '' ?><?= sanitizeOutput(SITE_NAME) ?> - <?= sanitizeOutput(SITE_TAGLINE) ?></title>
+    <title><?php 
+    $title = '';
+    if (isset($page_title)) {
+        $title = substr(sanitizeOutput($page_title), 0, 50); // Limit to 50 chars
+        $title = $title . ' | ' . substr(sanitizeOutput(SITE_NAME), 0, 25); // Keep title under 60 chars
+    } else {
+        $title = substr(sanitizeOutput(SITE_NAME), 0, 50) . ' - ' . substr(sanitizeOutput(SITE_TAGLINE), 0, 40);
+    }
+    echo $title;
+    ?></title>
+    
+    <!-- Hreflang Tags -->
+    <link rel="alternate" hreflang="en-in" href="<?= rtrim(SITE_URL, '/') . $_SERVER['REQUEST_URI'] ?>" />
+    <link rel="alternate" hreflang="x-default" href="<?= rtrim(SITE_URL, '/') . $_SERVER['REQUEST_URI'] ?>" />
     <meta name="description" content="<?= isset($meta_description) ? sanitizeOutput($meta_description) : sanitizeOutput(SITE_DESCRIPTION) ?>">
     <meta name="keywords" content="<?= isset($meta_keywords) ? sanitizeOutput($meta_keywords) : sanitizeOutput(SITE_KEYWORDS) ?>">
     <meta name="author" content="<?= sanitizeOutput(SITE_NAME) ?>">

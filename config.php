@@ -13,11 +13,21 @@ require_once __DIR__ . '/includes/env.php';
 // ====================== SITE CONFIGURATION ======================
 
 // Core Site Information
-define('SITE_NAME', env('SITE_NAME', 'Rakhi Construction & Consultancy Pvt Ltd'));
+// define('SITE_NAME', env('SITE_NAME', 'Rakhi Construction & Consultancy Pvt Ltd'));
 define('SITE_TAGLINE', env('SITE_TAGLINE', 'Building your vision with excellence and trust'));
 define('SITE_URL', env('APP_URL', 'https://rakhiconstruction.com'));
-define('SITE_DESCRIPTION', env('SITE_DESCRIPTION', 'Leading construction and consultancy firm in Nagpur offering end-to-end construction solutions.'));
-define('SITE_KEYWORDS', env('SITE_KEYWORDS', 'construction, nagpur, consultancy, residential, commercial, industrial, construction services'));
+// define('SITE_DESCRIPTION', env('SITE_DESCRIPTION', 'Leading construction and consultancy firm in Nagpur offering end-to-end construction solutions.'));
+// define('SITE_KEYWORDS', env('SITE_KEYWORDS', 'construction, nagpur, consultancy, residential, commercial, industrial, construction services'));
+
+
+// config.php additions
+define('SITE_NAME', 'Rakhi Construction & Consultancy Pvt Ltd');
+define('SITE_DESCRIPTION', 'Trusted construction company in Nagpur, Maharashtra. Offering affordable home building packages, expert consultancy, and transparent pricing for your dream home. CIN: U98200MH2023PTC408869.');
+define('SITE_KEYWORDS', 'construction company Nagpur, home building Maharashtra, civil construction services, building consultancy Nagpur, affordable construction packages, residential builders Nagpur, Rakhi Construction');
+// define('CONTACT_PHONE', '+91-XXXXXXXXXX'); // Add your actual phone
+define('CONTACT_EMAIL', 'info@rakhiconstruction.com'); // Add your actual email
+define('GEO_POSITION', '21.1458,79.0882'); // Nagpur coordinates
+define('FOUNDING_DATE', '2023-08-18');
 
 // Google reCAPTCHA
 define('RECAPTCHA_SITE_KEY', env('RECAPTCHA_SITE_KEY', 'your-site-key-here'));
@@ -26,7 +36,7 @@ define('RECAPTCHA_SECRET_KEY', env('RECAPTCHA_SECRET_KEY', 'your-secret-key-here
 // ====================== CONTACT INFORMATION ======================
 
 // Primary Contact
-define('CONTACT_EMAIL', env('CONTACT_EMAIL', 'info@rakhiconstruction.com'));
+// define('CONTACT_EMAIL', env('CONTACT_EMAIL', 'info@rakhiconstruction.com'));
 define('CONTACT_PHONE', env('CONTACT_PHONE', '+91 90759 56483'));
 define('CONTACT_ADDRESS', env('CONTACT_ADDRESS', 'PL NO 55, CHAKRADHAR HO NEAR NAGAR PANCHAYAT BAHADURA ROAD, Nagpur, MAHARASHTRA - 440034'));
 
@@ -131,3 +141,14 @@ if (session_status() === PHP_SESSION_NONE) {
     ini_set('session.use_strict_mode', '1');
     ini_set('session.cookie_samesite', 'Strict');
 }
+
+
+define('SMTP_HOST', 'smtp.gmail.com');
+define('SMTP_USER', 'yashdoifode1439@gmail.com');
+define('SMTP_PASS', 'mvub juzg shso fhpa');
+define('SMTP_PORT', 587);
+define('SMTP_SECURE', 'tls');
+
+
+define('ADMIN_EMAIL', 'info@rakhiconstruction.com');  // Where reset emails go
+define('ADMIN_NAME', 'Rakhi Construction Admin');

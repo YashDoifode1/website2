@@ -103,6 +103,12 @@ $current_page = basename($_SERVER['PHP_SELF']);
                 <div class="sidebar-divider"></div>
                 
                 <ul>
+                     <li>
+                        <a href="<?= SITE_URL ?>/admin/accounts.php" class="<?= $current_page === 'settings.php' ? 'active' : '' ?>">
+                            <i data-feather="settings"></i>
+                            <span>Account Settings</span>
+                        </a>
+                    </li>
                     <li>
                         <a href="<?= SITE_URL ?>/admin/settings.php" class="<?= $current_page === 'settings.php' ? 'active' : '' ?>">
                             <i data-feather="settings"></i>

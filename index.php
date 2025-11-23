@@ -5,9 +5,25 @@
  */
 
 declare(strict_types=1);
+// index.php (top)
+$current_page = 'home'; // default value to avoid "undefined variable" warnings
+
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/security.php';
 require_once __DIR__ . '/config.php';
+
+// Include optimization files
+require_once __DIR__ . '/includes/performance.php';
+require_once __DIR__ . '/includes/mobile-optimization.php'; 
+        add_viewport_meta();
+        add_touch_icons();
+        mobile_optimization_styles();
+// require_once __DIR__ . '/includes/social-media.php';
+//         add_social_meta_tags_custom();
+require_once __DIR__ . '/includes/seo-optimization.php'; 
+add_resource_hints_custom();
+
+add_structured_data_custom($is_homepage = ($current_page == 'home'));
 
 $page_title = 'Rakhi Construction | Build Your Dream Home';
 
