@@ -343,12 +343,7 @@ $page_title = 'Admin Login';
                     <span>Sign In</span>
                 </button>
             </form>
-            <div class="login-links">
-    <a href="forgot_password.php">
-        <i data-feather="help-circle"></i> Forgot Password?
-    </a>
-</div>
-
+            
             <div class="login-links">
                 <a href="<?= SITE_URL ?>/index.php">
                     <i data-feather="arrow-left"></i> Back to Website
