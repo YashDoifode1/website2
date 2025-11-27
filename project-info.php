@@ -1,8 +1,13 @@
 <?php
 /**
  * Project Info Page – Rakhi Construction & Consultancy
- * Modern design 100% aligned with blog‑detail.php
+ * Modern design 100% aligned with blog-detail.php
  * Uses project_images only (NO image column in projects)
+ *
+ * Updated to include:
+ *  - client_name
+ *  - client_testimonial
+ *  - client_budget (formatted defensively)
  */
 
 declare(strict_types=1);
@@ -24,8 +29,10 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
 $project_id = (int)$_GET['id'];
 
 /* ---------- Main Project ---------- */
+/* NOTE: client fields added to SELECT */
 $sql = "SELECT id, title, location, description, type, status,
-               completed_on, size, duration, created_at
+               completed_on, size, duration, created_at,
+               client_name, client_testimonial, client_budget
         FROM projects WHERE id = ?";
 $stmt = executeQuery($sql, [$project_id]);
 $project = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -270,6 +277,26 @@ require_once __DIR__ . '/includes/header.php';
                     <?= nl2br(sanitizeOutput($project['description'] ?: 'A premium construction project showcasing excellence in design, quality, and timely delivery.')) ?>
                 </div>
 
+                <!-- ===== CLIENT TESTIMONIAL (NEW) ===== -->
+                <?php if (!empty($project['client_testimonial'])): ?>
+                    <div class="testimonial mb-5">
+                        <div class="d-flex" style="gap:12px;align-items:flex-start;">
+                            <div style="font-size:1.6rem;color:var(--primary-yellow);line-height:1;">
+                                <i class="fas fa-quote-left"></i>
+                            </div>
+                            <div>
+                                <div class="small text-muted">Client testimonial</div>
+                                <p class="mb-1" style="font-style:italic;margin-top:8px;">
+                                    <?= nl2br(sanitizeOutput($project['client_testimonial'])) ?>
+                                </p>
+                                <?php if (!empty($project['client_name'])): ?>
+                                    <div class="fw-bold mt-2">— <?= sanitizeOutput($project['client_name']) ?></div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
                 <!-- ==== SHARE ==== -->
                 <div class="social-share">
                     <span class="fw-bold me-2">Share:</span>
@@ -394,6 +421,36 @@ require_once __DIR__ . '/includes/header.php';
                         </div>
                     </div>
 
+                    <!-- NEW: Client Name -->
+                    <?php if (!empty($project['client_name'])): ?>
+                        <div class="d-flex align-items-start mb-3">
+                            <div class="detail-icon me-3"><i class="fas fa-user"></i></div>
+                            <div>
+                                <div class="detail-label">Client</div>
+                                <div class="detail-value fw-bold"><?= sanitizeOutput($project['client_name']) ?></div>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+
+                    <!-- NEW: Client Budget (formatted defensively) -->
+                    <?php if (isset($project['client_budget']) && $project['client_budget'] !== null && $project['client_budget'] !== ''): ?>
+                        <div class="d-flex align-items-start mb-3">
+                            <div class="detail-icon me-3"><i class="fas fa-wallet"></i></div>
+                            <div>
+                                <div class="detail-label">Budget</div>
+                                <div class="detail-value fw-bold">
+                                    <?php
+                                        if (is_numeric($project['client_budget'])) {
+                                            echo '₹' . number_format((float)$project['client_budget']);
+                                        } else {
+                                            echo sanitizeOutput($project['client_budget']);
+                                        }
+                                    ?>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+
                     <hr class="my-4">
                     <div class="d-grid gap-2">
                         <a href="<?= $base_path ?>/contact.php" class="btn btn-primary">
@@ -464,9 +521,9 @@ require_once __DIR__ . '/includes/header.php';
 /* Gallery */
 function changeMainImage(src, el){
     const main = document.getElementById('mainGalleryImage');
-    main.src = src;
+    if (main) main.src = src;
     document.querySelectorAll('.thumb-img').forEach(i=>i.classList.remove('active'));
-    el.classList.add('active');
+    if (el) el.classList.add('active');
 }
 
 /* Lightbox */

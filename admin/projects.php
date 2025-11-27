@@ -26,7 +26,10 @@ $project_id = $_GET['id'] ?? null;
 function getProjectThumbnail(int $pid, string $basePath): string
 {
     $stmt = executeQuery(
-        "SELECT image_path FROM project_images WHERE project_id = ? ORDER BY `order` ASC, id ASC LIMIT 1",
+        "SELECT image_path FROM project_images 
+         WHERE project_id = ? 
+         ORDER BY `order` ASC, id ASC 
+         LIMIT 1",
         [$pid]
     );
     $row = $stmt->fetch();
@@ -43,7 +46,7 @@ function getProjectThumbnail(int $pid, string $basePath): string
 // ---------------------------------------------------------------------
 if ($action === 'delete' && $project_id) {
     try {
-        // Delete all gallery images + files
+        // Delete gallery images + files
         $gallery = executeQuery("SELECT image_path FROM project_images WHERE project_id = ?", [$project_id])->fetchAll();
         foreach ($gallery as $g) {
             if (!empty($g['image_path'])) {
@@ -64,12 +67,19 @@ if ($action === 'delete' && $project_id) {
 }
 
 // ---------------------------------------------------------------------
-// Handle Add/Edit Form Submission (NO IMAGE UPLOAD)
+// Handle Add/Edit Submission
 // ---------------------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
     $title        = trim($_POST['title'] ?? '');
     $location     = trim($_POST['location'] ?? '');
     $description  = trim($_POST['description'] ?? '');
+
+    // NEW FIELDS
+    $client_name        = trim($_POST['client_name'] ?? '');
+    $client_testimonial = trim($_POST['client_testimonial'] ?? '');
+    $client_budget      = trim($_POST['client_budget'] ?? '');
+
     $type         = $_POST['type'] ?? 'residential';
     $status       = $_POST['status'] ?? 'current';
     $size         = trim($_POST['size'] ?? '');
@@ -80,30 +90,68 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error_message = 'Please fill in all required fields.';
     } else {
         try {
+
             if ($action === 'edit' && $project_id) {
+
                 $sql = "UPDATE projects SET 
-                            title = ?, location = ?, description = ?, 
-                            type = ?, status = ?, size = ?, duration = ?, 
-                            completed_on = ? 
-                        WHERE id = ?";
+                        title = ?, 
+                        location = ?, 
+                        description = ?, 
+                        client_name = ?,
+                        client_testimonial = ?,
+                        client_budget = ?,
+                        type = ?, 
+                        status = ?, 
+                        size = ?, 
+                        duration = ?, 
+                        completed_on = ?,
+                        updated_at = NOW()
+                    WHERE id = ?";
+
                 executeQuery($sql, [
-                    $title, $location, $description,
-                    $type, $status, $size, $duration,
-                    $completed_on ?: null, $project_id
+                    $title,
+                    $location,
+                    $description,
+                    $client_name,
+                    $client_testimonial,
+                    $client_budget ?: null,
+                    $type,
+                    $status,
+                    $size,
+                    $duration,
+                    $completed_on ?: null,
+                    $project_id
                 ]);
+
                 $success_message = 'Project updated successfully!';
+
             } else {
+
                 $sql = "INSERT INTO projects 
-                            (title, location, description, type, status, size, duration, completed_on) 
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                        (title, location, description,
+                         client_name, client_testimonial, client_budget,
+                         type, status, size, duration, completed_on, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
+
                 executeQuery($sql, [
-                    $title, $location, $description,
-                    $type, $status, $size, $duration,
+                    $title,
+                    $location,
+                    $description,
+                    $client_name,
+                    $client_testimonial,
+                    $client_budget ?: null,
+                    $type,
+                    $status,
+                    $size,
+                    $duration,
                     $completed_on ?: null
                 ]);
+
                 $success_message = 'Project added successfully!';
             }
+
             $action = 'list';
+
         } catch (PDOException $e) {
             error_log('Save Project Error: ' . $e->getMessage());
             $error_message = 'Error saving project.';
@@ -125,7 +173,7 @@ if ($action === 'edit' && $project_id) {
 }
 
 // ---------------------------------------------------------------------
-// Fetch all projects for listing
+// Fetch all projects
 // ---------------------------------------------------------------------
 $projects = [];
 if ($action === 'list') {
@@ -167,7 +215,8 @@ require_once __DIR__ . '/includes/admin_header.php';
 <?php endif; ?>
 
 <?php if ($action === 'list'): ?>
-    <!-- List View -->
+
+    <!-- LIST VIEW -->
     <div class="card">
         <div class="card-header">
             <h2 class="card-title">All Projects</h2>
@@ -177,8 +226,10 @@ require_once __DIR__ . '/includes/admin_header.php';
         </div>
 
         <?php if (empty($projects)): ?>
-            <p>No projects found. <a href="?action=add">Add your first project</a>!</p>
+            <p>No projects found. <a href="?action=add">Add your first project</a>.</p>
+
         <?php else: ?>
+
             <div class="table-container">
                 <table class="admin-table">
                     <thead>
@@ -186,129 +237,155 @@ require_once __DIR__ . '/includes/admin_header.php';
                             <th>Thumbnail</th>
                             <th>Title</th>
                             <th>Location</th>
-                            <th>Type</th>
+                            <th>Client</th>
+                            <th>Budget</th>
                             <th>Status</th>
                             <th>Completed</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
+
                     <tbody>
-                        <?php foreach ($projects as $proj): ?>
-                            <tr>
-                                <td>
-                                    <img src="<?= $proj['thumbnail'] ?>"
-                                         alt="thumb"
-                                         style="width:60px;height:60px;object-fit:cover;border-radius:4px;"
-                                         onerror="this.src='https://via.placeholder.com/60/1A1A1A/F9A826?text=NA'">
-                                </td>
-                                <td><strong><?= sanitizeOutput($proj['title']) ?></strong></td>
-                                <td><?= sanitizeOutput($proj['location']) ?></td>
-                                <td><?= ucfirst(sanitizeOutput($proj['type'])) ?></td>
-                                <td>
-                                    <span class="badge <?= $proj['status'] === 'current' ? 'bg-success' : ($proj['status'] === 'future' ? 'bg-warning text-dark' : 'bg-primary') ?>">
-                                        <?= ucfirst($proj['status']) ?>
-                                    </span>
-                                </td>
-                                <td><?= $proj['completed_on'] ? date('M Y', strtotime($proj['completed_on'])) : '—' ?></td>
-                                <td class="table-actions">
-                                    <a href="?action=edit&id=<?= $proj['id'] ?>" class="btn-edit">Edit</a>
-                                    <a href="?action=delete&id=<?= $proj['id'] ?>" class="btn-delete"
-                                       onclick="return confirm('Delete project and ALL images?');">Delete</a>
-                                    <a href="project_gallery.php?project_id=<?= $proj['id'] ?>" class="btn btn-info btn-sm">Gallery</a>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
+                    <?php foreach ($projects as $proj): ?>
+                        <tr>
+                            <td>
+                                <img src="<?= $proj['thumbnail'] ?>" 
+                                     style="width:60px;height:60px;object-fit:cover;border-radius:4px;">
+                            </td>
+
+                            <td><strong><?= sanitizeOutput($proj['title']) ?></strong></td>
+
+                            <td><?= sanitizeOutput($proj['location']) ?></td>
+
+                            <td><?= sanitizeOutput($proj['client_name'] ?? '—') ?></td>
+
+                            <td>
+                                <?= is_numeric($proj['client_budget']) ? number_format((float)$proj['client_budget']) : '—' ?>
+                            </td>
+
+                            <td><?= ucfirst($proj['status']) ?></td>
+
+                            <td><?= $proj['completed_on'] ? date('M Y', strtotime($proj['completed_on'])) : '—' ?></td>
+
+                            <td class="table-actions">
+                                <a href="?action=edit&id=<?= $proj['id'] ?>" class="btn-edit">Edit</a>
+                                <a href="?action=delete&id=<?= $proj['id'] ?>"
+                                   class="btn-delete"
+                                   onclick="return confirm('Delete project and ALL images?');">Delete</a>
+                                <a href="project_gallery.php?project_id=<?= $proj['id'] ?>" class="btn btn-info btn-sm">Gallery</a>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
                     </tbody>
+
                 </table>
             </div>
+
         <?php endif; ?>
     </div>
 
 <?php elseif ($action === 'add' || $action === 'edit'): ?>
-    <!-- Add/Edit Form (NO IMAGE UPLOAD) -->
+
+    <!-- ADD / EDIT FORM -->
     <div class="card">
         <div class="card-header">
             <h2 class="card-title"><?= $action === 'edit' ? 'Edit Project' : 'Add New Project' ?></h2>
-            <a href="?action=list" class="btn btn-secondary">
-                <i data-feather="arrow-left"></i> Back to List
-            </a>
+            <a href="?action=list" class="btn btn-secondary"><i data-feather="arrow-left"></i> Back</a>
         </div>
 
-        <form method="POST" action="">
+        <form method="POST">
+
             <div class="form-grid">
                 <div class="form-group">
-                    <label for="title" class="form-label">Project Title *</label>
-                    <input type="text" id="title" name="title" class="form-input"
-                           value="<?= $project ? sanitizeOutput($project['title']) : '' ?>"
-                           placeholder="e.g., Mr. Kushal Harish Residence" required>
+                    <label>Project Title *</label>
+                    <input type="text" name="title" class="form-input"
+                           value="<?= $project['title'] ?? '' ?>" required>
                 </div>
 
                 <div class="form-group">
-                    <label for="location" class="form-label">Location *</label>
-                    <input type="text" id="location" name="location" class="form-input"
-                           value="<?= $project ? sanitizeOutput($project['location']) : '' ?>"
-                           placeholder="e.g., Nelamangala, Bangalore" required>
+                    <label>Location *</label>
+                    <input type="text" name="location" class="form-input"
+                           value="<?= $project['location'] ?? '' ?>" required>
                 </div>
             </div>
 
             <div class="form-group">
-                <label for="description" class="form-label">Description *</label>
-                <textarea id="description" name="description" class="form-textarea" rows="5" required
-                          placeholder="Enter project details, size, duration, highlights..."><?= $project ? sanitizeOutput($project['description']) : '' ?></textarea>
+                <label>Description *</label>
+                <textarea name="description" class="form-textarea" rows="5" required><?= $project['description'] ?? '' ?></textarea>
+            </div>
+
+            <!-- NEW: Client Name -->
+            <div class="form-group">
+                <label>Client Name</label>
+                <input type="text" name="client_name" class="form-input"
+                       value="<?= $project['client_name'] ?? '' ?>">
+            </div>
+
+            <!-- NEW: Testimonial -->
+            <div class="form-group">
+                <label>Client Testimonial</label>
+                <textarea name="client_testimonial" class="form-textarea" rows="4"><?= $project['client_testimonial'] ?? '' ?></textarea>
+            </div>
+
+            <!-- NEW: Budget -->
+            <div class="form-group">
+                <label>Client Budget (₹)</label>
+                <input type="number" step="0.01" name="client_budget" class="form-input"
+                       value="<?= $project['client_budget'] ?? '' ?>">
             </div>
 
             <div class="form-grid">
                 <div class="form-group">
-                    <label for="type" class="form-label">Project Type</label>
-                    <select id="type" name="type" class="form-input">
-                        <option value="residential" <?= ($project && $project['type'] === 'residential') ? 'selected' : '' ?>>Residential</option>
-                        <option value="commercial" <?= ($project && $project['type'] === 'commercial') ? 'selected' : '' ?>>Commercial</option>
-                        <option value="renovation" <?= ($project && $project['type'] === 'renovation') ? 'selected' : '' ?>>Renovation</option>
-                        <option value="institutional" <?= ($project && $project['type'] === 'institutional') ? 'selected' : '' ?>>Institutional</option>
+                    <label>Type</label>
+                    <select name="type" class="form-input">
+                        <option value="residential" <?= isset($project) && $project['type']=='residential'?'selected':'' ?>>Residential</option>
+                        <option value="commercial" <?= isset($project) && $project['type']=='commercial'?'selected':'' ?>>Commercial</option>
+                        <option value="renovation" <?= isset($project) && $project['type']=='renovation'?'selected':'' ?>>Renovation</option>
+                        <option value="institutional" <?= isset($project) && $project['type']=='institutional'?'selected':'' ?>>Institutional</option>
                     </select>
                 </div>
 
                 <div class="form-group">
-                    <label for="status" class="form-label">Status</label>
-                    <select id="status" name="status" class="form-input">
-                        <option value="current" <?= ($project && $project['status'] === 'current') ? 'selected' : '' ?>>Current</option>
-                        <option value="future" <?= ($project && $project['status'] === 'future') ? 'selected' : '' ?>>Future</option>
-                        <option value="completed" <?= ($project && $project['status'] === 'completed') ? 'selected' : '' ?>>Completed</option>
+                    <label>Status</label>
+                    <select name="status" class="form-input">
+                        <option value="current" <?= isset($project) && $project['status']=='current'?'selected':'' ?>>Current</option>
+                        <option value="future" <?= isset($project) && $project['status']=='future'?'selected':'' ?>>Future</option>
+                        <option value="completed" <?= isset($project) && $project['status']=='completed'?'selected':'' ?>>Completed</option>
                     </select>
                 </div>
             </div>
 
             <div class="form-grid">
                 <div class="form-group">
-                    <label for="size" class="form-label">Size (e.g., 2500 sq.ft)</label>
-                    <input type="text" id="size" name="size" class="form-input"
-                           value="<?= $project ? sanitizeOutput($project['size']) : '' ?>"
-                           placeholder="2500 sq.ft">
+                    <label>Size</label>
+                    <input type="text" name="size" class="form-input"
+                           value="<?= $project['size'] ?? '' ?>">
                 </div>
 
                 <div class="form-group">
-                    <label for="duration" class="form-label">Duration (e.g., 18 months)</label>
-                    <input type="text" id="duration" name="duration" class="form-input"
-                           value="<?= $project ? sanitizeOutput($project['duration']) : '' ?>"
-                           placeholder="18 months">
+                    <label>Duration</label>
+                    <input type="text" name="duration" class="form-input"
+                           value="<?= $project['duration'] ?? '' ?>">
                 </div>
             </div>
 
             <div class="form-group">
-                <label for="completed_on" class="form-label">Completion Date</label>
-                <input type="date" id="completed_on" name="completed_on" class="form-input"
-                       value="<?= $project && $project['completed_on'] ? $project['completed_on'] : '' ?>">
+                <label>Completion Date</label>
+                <input type="date" name="completed_on" class="form-input"
+                       value="<?= $project['completed_on'] ?? '' ?>">
             </div>
 
-            <div class="btn-group" style="margin-top: 2rem;">
+            <div class="btn-group" style="margin-top: 20px;">
                 <button type="submit" class="btn btn-primary">
                     <i data-feather="save"></i>
                     <?= $action === 'edit' ? 'Update Project' : 'Add Project' ?>
                 </button>
                 <a href="?action=list" class="btn btn-secondary">Cancel</a>
             </div>
+
         </form>
     </div>
+
 <?php endif; ?>
 
 <?php require_once __DIR__ . '/includes/admin_footer.php'; ?>
