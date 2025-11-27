@@ -1,0 +1,254 @@
+<?php
+declare(strict_types=1);
+
+// ------------------ DEBUG / ERROR LOGGING ------------------
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/error.log');
+
+register_shutdown_function(function () {
+    $err = error_get_last();
+    if ($err) {
+        // print fatal errors (for debugging only; remove in production)
+        echo "<pre>Fatal Error:\n";
+        print_r($err);
+        echo "</pre>";
+    }
+});
+
+session_start();
+
+// ------------------ SAFELY INCLUDE DEPENDENCIES ------------------
+$required = [
+    __DIR__ . '/../config.php',
+    __DIR__ . '/../includes/db.php',
+    // We will load PHPMailer only if vendor/autoload.php exists
+];
+
+foreach ($required as $file) {
+    if (!file_exists($file)) {
+        error_log("Missing required file: {$file}");
+        echo "Server configuration error: missing file " . basename($file);
+        exit;
+    }
+}
+
+// now require the files (we already checked existence)
+require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../includes/db.php';
+
+// PHPMailer: optional but will not cause fatal if missing
+$composerAutoload = __DIR__ . '/../vendor/autoload.php';
+$phpmailer_available = false;
+if (file_exists($composerAutoload)) {
+    require_once $composerAutoload;
+    $phpmailer_available = class_exists(\PHPMailer\PHPMailer\PHPMailer::class);
+} else {
+    // don't fatal; we'll handle missing mailer during runtime
+    error_log("Composer autoload not found at {$composerAutoload}");
+}
+
+// helper redirect if not defined in your includes
+if (!function_exists('redirect')) {
+    function redirect(string $url): void
+    {
+        header('Location: ' . $url);
+        exit;
+    }
+}
+
+// ------------------ QUICK DB CHECK ------------------
+try {
+    // getDbConnection() comes from your includes/db.php
+    $pdo = getDbConnection();
+    if (!$pdo) {
+        throw new RuntimeException('Database connection returned null.');
+    }
+} catch (Throwable $e) {
+    error_log('DB connection error: ' . $e->getMessage());
+    echo "Database connection error. Check server logs.";
+    exit;
+}
+
+// ------------------ PAGE LOGIC ------------------
+use PHPMailer\PHPMailer\PHPMailer;
+
+$error_message = '';
+$success_message = '';
+$show_otp_form = false;
+$username = '';
+
+// If we have a pending admin id in session, we will auto-show OTP form
+if (!empty($_SESSION['pending_admin_id'])) {
+    $show_otp_form = true;
+}
+
+// POST processing
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // OTP verification path
+    if (!empty($_POST['otp'])) {
+        // Verify OTP
+        $otp = trim((string)($_POST['otp'] ?? ''));
+        $pending_id = $_SESSION['pending_admin_id'] ?? null;
+        if (!$pending_id) {
+            $error_message = 'Session expired. Start login again.';
+        } else {
+            try {
+                $stmt = executeQuery('SELECT otp_hash, otp_expires FROM admin_users WHERE id = ? LIMIT 1', [$pending_id]);
+                $admin = $stmt->fetch();
+                if (!$admin) {
+                    $error_message = 'Invalid session user.';
+                } elseif (empty($admin['otp_hash']) || empty($admin['otp_expires']) || strtotime($admin['otp_expires']) < time()) {
+                    $error_message = 'OTP expired. Please login again.';
+                } elseif (!password_verify((string)$otp, $admin['otp_hash'])) {
+                    $error_message = 'Invalid OTP.';
+                } else {
+                    // success: create session
+                    $_SESSION['admin_logged_in'] = true;
+                    $_SESSION['admin_id'] = $pending_id;
+                    // clear otp
+                    executeQuery('UPDATE admin_users SET otp_hash = NULL, otp_expires = NULL WHERE id = ?', [$pending_id]);
+                    unset($_SESSION['pending_admin_id']);
+                    redirect('/admin/dashboard.php');
+                }
+            } catch (Throwable $e) {
+                error_log('OTP verify error: ' . $e->getMessage());
+                $error_message = 'OTP verification error. Check logs.';
+            }
+        }
+        $show_otp_form = true;
+    } else {
+        // Username/password submission
+        $username = trim((string)($_POST['username'] ?? ''));
+        $password = $_POST['password'] ?? '';
+
+        if ($username === '' || $password === '') {
+            $error_message = 'Please provide username and password.';
+        } else {
+            // small anti-timing delay
+            usleep(random_int(300000, 600000));
+
+            try {
+                $stmt = executeQuery('SELECT id, username, password_hash, email FROM admin_users WHERE username = ? LIMIT 1', [$username]);
+                $admin = $stmt->fetch();
+
+                if (!$admin) {
+                    $error_message = 'Invalid username or password.';
+                } else {
+                    // Note: adapt to your column name (password_hash / password)
+                    $dbHash = $admin['password_hash'] ?? $admin['password'] ?? null;
+                    if (!$dbHash || !password_verify((string)$password, (string)$dbHash)) {
+                        $error_message = 'Invalid username or password.';
+                    } else {
+                        // generate OTP
+                        $otp_code = (string) random_int(100000, 999999);
+                        $otp_hash = password_hash($otp_code, PASSWORD_DEFAULT); // cast ensured
+                        $otp_expires = date('Y-m-d H:i:s', strtotime('+10 minutes'));
+
+                        executeQuery('UPDATE admin_users SET otp_hash = ?, otp_expires = ? WHERE id = ?', [$otp_hash, $otp_expires, $admin['id']]);
+
+                        // attempt to send email if PHPMailer available and admin has email
+                        $admin_email = $admin['email'] ?? null;
+                        if ($phpmailer_available && $admin_email && filter_var($admin_email, FILTER_VALIDATE_EMAIL)) {
+                            try {
+                                $mail = new PHPMailer(true);
+                                $mail->isSMTP();
+                                $mail->Host = SMTP_HOST;
+                                $mail->SMTPAuth = true;
+                                $mail->Username = SMTP_USER;
+                                $mail->Password = SMTP_PASS;
+                                // choose secure constant if defined (SMTP_SECURE) otherwise tls
+                                $secure = defined('SMTP_SECURE') ? SMTP_SECURE : 'tls';
+                                $mail->SMTPSecure = $secure;
+                                $mail->Port = SMTP_PORT;
+
+                                $mail->setFrom(SMTP_USER, SITE_NAME . ' Admin');
+                                $mail->addAddress($admin_email, $admin['username'] ?? $username);
+                                $mail->isHTML(true);
+                                $mail->Subject = 'Your One-Time Login Code';
+                                $mail->Body = "<p>Your OTP code is: <strong>{$otp_code}</strong></p><p>Expires in 10 minutes.</p>";
+
+                                $mail->send();
+                                $success_message = 'OTP sent to registered email.';
+                            } catch (Throwable $e) {
+                                error_log('PHPMailer send failed: ' . $e->getMessage());
+                                $error_message = 'Unable to send OTP email (check server).';
+                            }
+                        } else {
+                            // PHPMailer not available or no valid email — do not fatal; show helpful message
+                            if (!$phpmailer_available) {
+                                error_log('PHPMailer not available; OTP not emailed.');
+                                $error_message = 'Email service unavailable — contact admin.';
+                            } elseif (!$admin_email) {
+                                error_log('Admin has no email; OTP cannot be emailed for admin id ' . $admin['id']);
+                                $error_message = 'No email on file for this account. Contact support.';
+                            } else {
+                                $error_message = 'Cannot send OTP. Invalid email.';
+                            }
+                        }
+
+                        // set session to expect OTP (even if email failed we still set it)
+                        $_SESSION['pending_admin_id'] = $admin['id'];
+                        $show_otp_form = true;
+                    }
+                }
+            } catch (Throwable $e) {
+                error_log('Authentication error: ' . $e->getMessage());
+                $error_message = 'Authentication error. Check logs.';
+            }
+        }
+    }
+}
+
+// ------------------ HTML OUTPUT ------------------
+?>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title><?= htmlspecialchars(SITE_NAME ?? 'Admin') ?> - Login</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<style>
+/* minimal inline styles for clarity */
+body{font-family:Arial,Helvetica,sans-serif;background:#f3f4f6;padding:40px}
+.wrapper{max-width:480px;margin:0 auto;background:#fff;padding:28px;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.06)}
+.input{width:100%;padding:10px;margin:8px 0;border:1px solid #ddd;border-radius:4px}
+.btn{display:inline-block;padding:10px 14px;background:#2b6cb0;color:#fff;border:none;border-radius:6px;cursor:pointer}
+.msg{padding:12px;border-radius:6px;margin-bottom:12px}
+.error{background:#ffe6e6;color:#a80000;border:1px solid #f5c2c2}
+.success{background:#e6fffa;color:#027a4b;border:1px solid #c7f2e8}
+</style>
+</head>
+<body>
+<div class="wrapper">
+    <h2>Admin Login</h2>
+
+    <?php if ($error_message): ?>
+        <div class="msg error"><?= htmlspecialchars($error_message) ?></div>
+    <?php endif; ?>
+
+    <?php if ($success_message): ?>
+        <div class="msg success"><?= htmlspecialchars($success_message) ?></div>
+    <?php endif; ?>
+
+    <?php if ($show_otp_form): ?>
+        <form method="post" novalidate>
+            <label>Enter OTP</label>
+            <input class="input" name="otp" type="text" maxlength="6" required autofocus />
+            <button class="btn" type="submit">Verify OTP</button>
+        </form>
+        <p style="margin-top:12px;font-size:13px;color:#666">If you didn't receive email, check server logs at <code>admin/error.log</code>.</p>
+    <?php else: ?>
+        <form method="post" novalidate>
+            <label>Username</label>
+            <input class="input" name="username" type="text" required value="<?= htmlspecialchars($username) ?>" autofocus />
+            <label>Password</label>
+            <input class="input" name="password" type="password" required />
+            <button class="btn" type="submit">Sign in</button>
+        </form>
+    <?php endif; ?>
+</div>
+</body>
+</html>

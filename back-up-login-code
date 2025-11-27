@@ -1,0 +1,527 @@
+<?php
+declare(strict_types=1);
+
+// ------------------ DEBUG / ERROR LOGGING ------------------
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/error.log');
+
+register_shutdown_function(function () {
+    $err = error_get_last();
+    if ($err) {
+        // print fatal errors (for debugging only; remove in production)
+        echo "<pre>Fatal Error:\n";
+        print_r($err);
+        echo "</pre>";
+    }
+});
+
+session_start();
+
+// ------------------ SAFELY INCLUDE DEPENDENCIES ------------------
+$required = [
+    __DIR__ . '/../config.php',
+    __DIR__ . '/../includes/db.php',
+    // We will load PHPMailer only if vendor/autoload.php exists
+];
+
+foreach ($required as $file) {
+    if (!file_exists($file)) {
+        error_log("Missing required file: {$file}");
+        echo "Server configuration error: missing file " . basename($file);
+        exit;
+    }
+}
+
+// now require the files (we already checked existence)
+require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../includes/db.php';
+
+// PHPMailer: optional but will not cause fatal if missing
+$composerAutoload = __DIR__ . '/../vendor/autoload.php';
+$phpmailer_available = false;
+if (file_exists($composerAutoload)) {
+    require_once $composerAutoload;
+    $phpmailer_available = class_exists(\PHPMailer\PHPMailer\PHPMailer::class);
+} else {
+    // don't fatal; we'll handle missing mailer during runtime
+    error_log("Composer autoload not found at {$composerAutoload}");
+}
+
+// helper redirect if not defined in your includes
+if (!function_exists('redirect')) {
+    function redirect(string $url): void
+    {
+        header('Location: ' . $url);
+        exit;
+    }
+}
+
+// ------------------ QUICK DB CHECK ------------------
+try {
+    // getDbConnection() comes from your includes/db.php
+    $pdo = getDbConnection();
+    if (!$pdo) {
+        throw new RuntimeException('Database connection returned null.');
+    }
+} catch (Throwable $e) {
+    error_log('DB connection error: ' . $e->getMessage());
+    echo "Database connection error. Check server logs.";
+    exit;
+}
+
+// ------------------ PAGE LOGIC ------------------
+use PHPMailer\PHPMailer\PHPMailer;
+
+$error_message = '';
+$success_message = '';
+$show_otp_form = false;
+$username = '';
+
+// If we have a pending admin id in session, we will auto-show OTP form
+if (!empty($_SESSION['pending_admin_id'])) {
+    $show_otp_form = true;
+}
+
+// POST processing
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // OTP verification path
+    if (!empty($_POST['otp'])) {
+        // Verify OTP
+        $otp = trim((string)($_POST['otp'] ?? ''));
+        $pending_id = $_SESSION['pending_admin_id'] ?? null;
+        if (!$pending_id) {
+            $error_message = 'Session expired. Please start login again.';
+        } else {
+            try {
+                $stmt = executeQuery('SELECT otp_hash, otp_expires FROM admin_users WHERE id = ? LIMIT 1', [$pending_id]);
+                $admin = $stmt->fetch();
+                if (!$admin) {
+                    $error_message = 'Invalid session user.';
+                } elseif (empty($admin['otp_hash']) || empty($admin['otp_expires']) || strtotime($admin['otp_expires']) < time()) {
+                    $error_message = 'OTP has expired. Please login again.';
+                } elseif (!password_verify((string)$otp, $admin['otp_hash'])) {
+                    $error_message = 'Invalid OTP code. Please try again.';
+                } else {
+                    // success: create session
+                    $_SESSION['admin_logged_in'] = true;
+                    $_SESSION['admin_id'] = $pending_id;
+                    // clear otp
+                    executeQuery('UPDATE admin_users SET otp_hash = NULL, otp_expires = NULL WHERE id = ?', [$pending_id]);
+                    unset($_SESSION['pending_admin_id']);
+                    redirect('/admin/dashboard.php');
+                }
+            } catch (Throwable $e) {
+                error_log('OTP verify error: ' . $e->getMessage());
+                $error_message = 'OTP verification error. Please try again.';
+            }
+        }
+        $show_otp_form = true;
+    } else {
+        // Username/password submission
+        $username = trim((string)($_POST['username'] ?? ''));
+        $password = $_POST['password'] ?? '';
+
+        if ($username === '' || $password === '') {
+            $error_message = 'Please provide both username and password.';
+        } else {
+            // small anti-timing delay
+            usleep(random_int(300000, 600000));
+
+            try {
+                $stmt = executeQuery('SELECT id, username, password_hash, email FROM admin_users WHERE username = ? LIMIT 1', [$username]);
+                $admin = $stmt->fetch();
+
+                if (!$admin) {
+                    $error_message = 'Invalid username or password.';
+                } else {
+                    // Note: adapt to your column name (password_hash / password)
+                    $dbHash = $admin['password_hash'] ?? $admin['password'] ?? null;
+                    if (!$dbHash || !password_verify((string)$password, (string)$dbHash)) {
+                        $error_message = 'Invalid username or password.';
+                    } else {
+                        // generate OTP
+                        $otp_code = (string) random_int(100000, 999999);
+                        $otp_hash = password_hash($otp_code, PASSWORD_DEFAULT); // cast ensured
+                        $otp_expires = date('Y-m-d H:i:s', strtotime('+10 minutes'));
+
+                        executeQuery('UPDATE admin_users SET otp_hash = ?, otp_expires = ? WHERE id = ?', [$otp_hash, $otp_expires, $admin['id']]);
+
+                        // attempt to send email if PHPMailer available and admin has email
+                        $admin_email = $admin['email'] ?? null;
+                        if ($phpmailer_available && $admin_email && filter_var($admin_email, FILTER_VALIDATE_EMAIL)) {
+                            try {
+                                $mail = new PHPMailer(true);
+                                $mail->isSMTP();
+                                $mail->Host = SMTP_HOST;
+                                $mail->SMTPAuth = true;
+                                $mail->Username = SMTP_USER;
+                                $mail->Password = SMTP_PASS;
+                                // choose secure constant if defined (SMTP_SECURE) otherwise tls
+                                $secure = defined('SMTP_SECURE') ? SMTP_SECURE : 'tls';
+                                $mail->SMTPSecure = $secure;
+                                $mail->Port = SMTP_PORT;
+
+                                $mail->setFrom(SMTP_USER, SITE_NAME . ' Admin');
+                                $mail->addAddress($admin_email, $admin['username'] ?? $username);
+                                $mail->isHTML(true);
+                                $mail->Subject = 'Your One-Time Login Code - ' . SITE_NAME;
+                                $mail->Body = "
+                                    <h2>Your Login Verification Code</h2>
+                                    <p>Hello " . htmlspecialchars($admin['username'] ?? $username) . ",</p>
+                                    <p>Your one-time verification code is: <strong style='font-size: 18px;'>{$otp_code}</strong></p>
+                                    <p>This code will expire in 10 minutes.</p>
+                                    <p><small>If you didn't request this code, please ignore this email.</small></p>
+                                ";
+
+                                $mail->send();
+                                $success_message = 'Verification code sent to your registered email address.';
+                            } catch (Throwable $e) {
+                                error_log('PHPMailer send failed: ' . $e->getMessage());
+                                $error_message = 'Unable to send verification email. Please contact administrator.';
+                            }
+                        } else {
+                            // PHPMailer not available or no valid email — do not fatal; show helpful message
+                            if (!$phpmailer_available) {
+                                error_log('PHPMailer not available; OTP not emailed.');
+                                $error_message = 'Email service temporarily unavailable. Please contact administrator.';
+                            } elseif (!$admin_email) {
+                                error_log('Admin has no email; OTP cannot be emailed for admin id ' . $admin['id']);
+                                $error_message = 'No email address on file for this account. Please contact support.';
+                            } else {
+                                $error_message = 'Cannot send verification code. Invalid email configuration.';
+                            }
+                        }
+
+                        // set session to expect OTP (even if email failed we still set it)
+                        $_SESSION['pending_admin_id'] = $admin['id'];
+                        $show_otp_form = true;
+                    }
+                }
+            } catch (Throwable $e) {
+                error_log('Authentication error: ' . $e->getMessage());
+                $error_message = 'Authentication error. Please try again.';
+            }
+        }
+    }
+}
+
+// ------------------ HTML OUTPUT ------------------
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title><?= htmlspecialchars(SITE_NAME ?? 'Admin') ?> - Secure Login</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 440px;
+        }
+
+        .login-card {
+            background: #fff;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .logo h1 {
+            color: #2d3748;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .logo p {
+            color: #718096;
+            font-size: 14px;
+        }
+
+        .form-header {
+            margin-bottom: 24px;
+        }
+
+        .form-header h2 {
+            color: #2d3748;
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .form-header p {
+            color: #718096;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            color: #4a5568;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: #fff;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px 20px;
+            background: #4299e1;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 8px;
+        }
+
+        .btn:hover {
+            background: #3182ce;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(66, 153, 225, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .message {
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            border: 1px solid transparent;
+        }
+
+        .error {
+            background: #fed7d7;
+            color: #c53030;
+            border-color: #feb2b2;
+        }
+
+        .success {
+            background: #c6f6d5;
+            color: #276749;
+            border-color: #9ae6b4;
+        }
+
+        .otp-info {
+            background: #ebf8ff;
+            color: #2b6cb0;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            border-left: 4px solid #4299e1;
+        }
+
+        .back-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .back-link a {
+            color: #718096;
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s ease;
+        }
+
+        .back-link a:hover {
+            color: #4299e1;
+        }
+
+        .divider {
+            height: 1px;
+            background: #e2e8f0;
+            margin: 24px 0;
+        }
+
+        @media (max-width: 480px) {
+            .login-card {
+                padding: 24px;
+            }
+            
+            body {
+                padding: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="logo">
+                <h1><?= htmlspecialchars(SITE_NAME ?? 'Admin') ?></h1>
+                <p>Secure Admin Portal</p>
+            </div>
+
+            <?php if ($error_message): ?>
+                <div class="message error">
+                    <?= htmlspecialchars($error_message) ?>
+                </div>
+            <?php endif; ?>
+
+            <?php if ($success_message): ?>
+                <div class="message success">
+                    <?= htmlspecialchars($success_message) ?>
+                </div>
+            <?php endif; ?>
+
+            <?php if ($show_otp_form): ?>
+                <div class="form-header">
+                    <h2>Two-Factor Verification</h2>
+                    <p>Enter the verification code sent to your email</p>
+                </div>
+
+                <div class="otp-info">
+                    <strong>Check your email</strong> for the 6-digit verification code. This code expires in 10 minutes.
+                </div>
+
+                <form method="post" novalidate>
+                    <div class="form-group">
+                        <label for="otp">Verification Code</label>
+                        <input 
+                            id="otp"
+                            class="input-field" 
+                            name="otp" 
+                            type="text" 
+                            maxlength="6" 
+                            pattern="[0-9]{6}"
+                            placeholder="Enter 6-digit code" 
+                            required 
+                            autofocus 
+                            autocomplete="one-time-code"
+                        />
+                    </div>
+                    <button class="btn" type="submit">Verify & Continue</button>
+                </form>
+
+                <div class="back-link">
+                    <a href="?reset=1">← Back to login</a>
+                </div>
+
+            <?php else: ?>
+                <div class="form-header">
+                    <h2>Admin Login</h2>
+                    <p>Enter your credentials to continue</p>
+                </div>
+
+                <form method="post" novalidate>
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input 
+                            id="username"
+                            class="input-field" 
+                            name="username" 
+                            type="text" 
+                            required 
+                            value="<?= htmlspecialchars($username) ?>" 
+                            autofocus 
+                            autocomplete="username"
+                            placeholder="Enter your username"
+                        />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input 
+                            id="password"
+                            class="input-field" 
+                            name="password" 
+                            type="password" 
+                            required 
+                            autocomplete="current-password"
+                            placeholder="Enter your password"
+                        />
+                    </div>
+
+                    <button class="btn" type="submit">Sign In Securely</button>
+                </form>
+
+                <div class="divider"></div>
+                
+                <div style="text-align: center;">
+                    <p style="color: #718096; font-size: 12px;">
+                        This system is protected by two-factor authentication
+                    </p>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <script>
+        // Auto-focus management and input enhancements
+        document.addEventListener('DOMContentLoaded', function() {
+            // Auto-focus the first input field
+            const firstInput = document.querySelector('input[autofocus]');
+            if (firstInput) {
+                firstInput.focus();
+            }
+
+            // OTP input auto-tab (if multiple inputs were used)
+            const otpInput = document.getElementById('otp');
+            if (otpInput) {
+                otpInput.addEventListener('input', function(e) {
+                    if (this.value.length === 6) {
+                        this.form.submit();
+                    }
+                });
+            }
+
+            // Prevent form resubmission on refresh
+            if (window.history.replaceState) {
+                window.history.replaceState(null, null, window.location.href);
+            }
+        });
+    </script>
+</body>
+</html>
