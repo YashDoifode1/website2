@@ -80,6 +80,12 @@ $current_page = basename($_SERVER['PHP_SELF']);
                             <span>Team</span>
                         </a>
                     </li>
+                     <li>
+                        <a href="<?= SITE_URL ?>/admin/users.php" class="<?= $current_page === 'users.php' ? 'active' : '' ?>">
+                            <i data-feather="users"></i>
+                            <span>Users</span>
+                        </a>
+                    </li>
                     <li>
                         <a href="<?= SITE_URL ?>/admin/testimonials.php" class="<?= $current_page === 'testimonials.php' ? 'active' : '' ?>">
                             <i data-feather="message-square"></i>
